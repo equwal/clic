@@ -9,8 +9,7 @@ with sbcl like this
 
 or with ecl
 
-    ecl -load clic.lisp**.
-
+    ecl --load clic.lisp**.
 
 # Requirements
 
@@ -20,15 +19,18 @@ If you want to produce a binary, you need ecl and a C compiler.
 
 # Make a binary
 
-If you have ecl and a C compiler, just type `make`
+## Linked binary requiring ECL
 
-You will get a binary named *clic*.
+If you have ecl and a C or C++ compiler, just type `make`. You will
+get a binary named *clic*. The makefile is a wrapper that call
+**make-binary.lisp** with ecl.
 
-The makefile is a wrapper that call **make-binary.lisp** with ecl.
+## Static binary (standalone)
 
+If you want to deploy **clic** without installing sbcl or ecl, you can
+create a standalone executable (10 Mb approximately) with sbcl.
 
-I don't provide a way to generate a binary with sbcl because it
-creates binaries larger than 10 Mb.
+    make sbcl-bin
 
 # Use it
 
