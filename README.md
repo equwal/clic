@@ -30,7 +30,7 @@ get a binary named *clic*. The makefile is a wrapper that call
 If you want to deploy **clic** without installing sbcl or ecl, you can
 create a standalone executable (10 Mb approximately) with sbcl.
 
-    make sbcl-bin
+    make standalone
 
 # Use it
 
