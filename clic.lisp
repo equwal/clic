@@ -5,6 +5,8 @@
   #+ecl
   (require 'sockets))
 
+(defstruct location host port uri type)
+
 (defun color(num1 num2)
   "generate string used to put ANSI color"
   (format nil "~a[~a;~am" #\Escape num1 num2))
@@ -68,13 +70,14 @@
 	
 	;; 0 file
 	(check "0"
-	       (setf (gethash line-number *links*) (list host port uri line-type ))
+	       (setf (gethash line-number *links*)
+		     (make-location :host host :port port :uri uri :type line-type ))
 	       (print-with-color text *color-file* line-number))
 	
 	;; 1 directory
 	(check "1"
-	       (setf (gethash line-number *links*) (list host port uri line-type))
-	       
+	       (setf (gethash line-number *links*)
+		     (make-location :host host :port port :uri uri :type line-type ))
 	       (print-with-color text *color-folder* line-number))
 	
 	;; 2 CSO phone-book
@@ -123,13 +126,14 @@
 (defun getpage(host port uri &optional (type "1"))
   "connect and display"
   
-  (format t "Asking gopher://~a:~a/~a~a~%" host port type uri)
+  
   
   ;; we reset the links table
   ;; if we have a new folder
   (when (string= "1" type)
     (setf *links* (make-hash-table))
-    (setf (gethash 0 *links*) (list host port uri type)))
+    (setf (gethash 0 *links*)
+	  (make-location :host host :port port :uri uri :type type)))
   
   ;; we prepare informations about the connection
   (let* ((address (sb-bsd-sockets:get-host-by-name host))
@@ -155,12 +159,15 @@
 		  
 		  ((string= "0" type)
 		   (format t "~a~%" line))))))
-  (format t "   ~a~80a~a~%" *cyan* " " *white*))
+  (format t "~aRequested gopher://~a:~a/~a~a~a~%" *cyan* host port type uri *white*))
 
 (defun g(key)
   "browse to the N-th link"
-  (let ((infos (gethash key *links*)))
-    (apply 'getpage infos)))
+  (let ((destination (gethash key *links*)))
+    (getpage (location-host destination)
+	     (location-port destination)
+	     (location-uri  destination)
+	     (location-type destination))))
 
 (defun help()
   "show help"
