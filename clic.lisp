@@ -3,7 +3,6 @@
 #+ecl
 (require 'sockets)
 
-
 (defun color(num1 num2)
   "generate string used to put ANSI color"
   (format nil "~a[~a;~am" #\Escape num1 num2))
@@ -13,12 +12,12 @@
 			    "h" "7" "8" "9" "+" "T" "g" "I"))
 
 ;; ansi colors
-(defparameter *red*    (color 1 31))
-(defparameter *white*  (color 0 70))
-(defparameter *blue*   (color 4 34))
-(defparameter *green*  (color 1 32))
-(defparameter *yellow* (color 0 33))
-(defparameter *cyan*   (color 0 46))
+(defparameter *red*           (color 1 31))
+(defparameter *white*         (color 0 70))
+(defparameter *color-folder*  (color 4 34))
+(defparameter *green*         (color 1 32))
+(defparameter *color-file*    (color 0 33))
+(defparameter *cyan*          (color 0 46))
 
 (defun print-with-color(text &optional (color *white*) (line-number nil))
   "Used to display a line with a color"
@@ -26,33 +25,26 @@
 
 (defmacro check(identifier &body code)
   "Syntax to make a when easier for formatted-output func"
-  `(progn
-     (when (string= ,identifier line-type)
-       ,@code)))
+  `(progn (when (string= ,identifier line-type) ,@code)))
 
-(defun split-tab(text)
-  (if (position #\Tab text)
-      (append
-       (loop for char across text
-	     counting char into count
-	     when (char= char #\Tab)
-	     collect
-	     (subseq text
-		     (let ((res (position #\Tab text :from-end t :end (- count 1))))
-		       (if res
-			   (+ 1 res)
-			 0))
-		     (- count 1)))
-       (list
-	(subseq text
-		(+ 1 (position #\Tab text :from-end t))
-		(- (length text) 1))))
-    nil))
+(defun split(text separator)
+  "this function split a string with separator and return a list"
+  (let ((text (concatenate 'string text (string separator))))
+    (loop for char across text
+	  counting char into count
+	  when (char= char separator)
+	  collect
+	  (subseq text
+		  (let ((res (position separator text :from-end t :end (- count 1))))
+		    (if res
+			(+ 1 res)
+		      0))
+		  (- count 1)))))
 
 (defun formatted-output(line line-number)
   "Used to display gopher response with color one line at a time"
   (let ((line-type (subseq line 0 1))
-	(infos (split-tab (subseq line 1))))
+	(infos (split (subseq line 1) #\Tab)))
 
     ;; see RFC 1436
     ;; section 3.8
@@ -65,7 +57,6 @@
 	    (host (caddr infos))
 	    (port (parse-integer (cadddr infos))))
 
-
 	
 	;; RFC, page 4
 	(check "i"
@@ -74,13 +65,13 @@
 	;; 0 file
 	(check "0"
 	       (setf (gethash line-number *links*) (list host port uri line-type ))
-	       (print-with-color text *yellow* line-number))
+	       (print-with-color text *color-file* line-number))
 	
 	;; 1 directory
 	(check "1"
 	       (setf (gethash line-number *links*) (list host port uri line-type))
 	       
-	       (print-with-color text *blue* line-number))
+	       (print-with-color text *color-folder* line-number))
 	
 	;; 2 CSO phone-book
 	;; WE SKIP
@@ -120,14 +111,14 @@
 	
 	;; h html link
 	(check "h"
-	       (print-with-color text *blue* "url"))
+	       (print-with-color text *color-file* "url"))
 	
 	;; I image
 	(check "I" 'unimplemented)))))
 
 (defun getpage(host port uri &optional (type "1"))
   "connect and display"
-
+  
   (format t "Asking gopher://~a:~a/~a~a~%" host port type uri)
   
   ;; we reset the links table
@@ -149,8 +140,6 @@
       ;; if the selector is 1 we omit it
       (format stream "~a~%" uri)
       (force-output stream)
-      
-      
 
       ;; for each line we receive we display it
       (loop for line = (read-line stream nil nil)
@@ -168,7 +157,6 @@
   "browse to the N-th link"
   (let ((infos (gethash key *links*)))
     (apply 'getpage infos)))
-
 
 (defun help()
   "show help"
