@@ -1,7 +1,9 @@
-#+sbcl
-(require 'sb-bsd-sockets)
-#+ecl
-(require 'sockets)
+;; let's hide the loading
+(let ((*standard-output* (make-broadcast-stream)))
+  #+sbcl
+  (require 'sb-bsd-sockets)
+  #+ecl
+  (require 'sockets))
 
 (defun color(num1 num2)
   "generate string used to put ANSI color"
@@ -34,12 +36,14 @@
 	  counting char into count
 	  when (char= char separator)
 	  collect
-	  (subseq text
-		  (let ((res (position separator text :from-end t :end (- count 1))))
-		    (if res
-			(+ 1 res)
-		      0))
-		  (- count 1)))))
+	  
+	  ;; we look at the position of the left separator
+	  (let ((left-separator-position (position separator text :from-end t :end (- count 1))))
+	    (subseq text
+		    ;; if we can't find a separator at the left of the current, then it's the start of
+		    ;; the string
+		    (if left-separator-position (+ 1 left-separator-position) 0) 
+		    (- count 1))))))
 
 (defun formatted-output(line line-number)
   "Used to display gopher response with color one line at a time"
@@ -171,12 +175,10 @@
   (format t "help   : show this help~%")
   (format t "x      : exit the shell, go back to REPL~%"))
 
-(defun start()
-  (getpage "bitreich.org" 70 "/")
-  (shell))
-
 (defun shell()
   "gNUM p h x"
+  (format t "clic => ")
+  (force-output)
   (loop for user-input = (format nil "~a" (read nil nil))
 	while (not (string= "X" user-input))
 	do
@@ -187,8 +189,12 @@
 	  (g 0))
 	 (t
 	  (when user-input
-	    (g (parse-integer user-input)))))))
+	    (g (parse-integer user-input)))))
+	(format t "clic => ")
+	(force-output)))
 
-(help)
-(help-shell)
-(start)
+(defun start()
+  (getpage "bitreich.org" 70 "/")
+  (shell))
+
+
