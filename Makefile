@@ -2,6 +2,7 @@
 # See the LICENSE file for copyright and license details.
 NAME = clic
 
+LISP   ?= ecl
 PREFIX ?= /usr
 BINDIR ?= ${PREFIX}/bin
 MANDIR ?= ${PREFIX}/share/man/man1
@@ -10,6 +11,9 @@ all: bin
 
 bin:
 	ecl --load make-binary.lisp
+
+sbcl-bin:
+	sbcl --load make-binary.lisp
 
 install: all
 	@echo installing executable to ${DESTDIR}${PREFIX}/bin
@@ -24,5 +28,7 @@ uninstall:
 clean:
 	rm -f clic clic.o clic.eclh clic.cxx
 
-.PHONY: all install uninstall clean
+test:
+	${LISP} --load clic.lisp --load test.lisp
 
+.PHONY: all install uninstall clean
