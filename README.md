@@ -12,13 +12,20 @@ or with ecl
     ecl -load clic.lisp**.
 
 
+# Requirements
+
+You need a Common LISP interpreter like ecl or sbcl to use Clic.
+
+If you want to produce a binary, you need ecl and a C compiler.
+
 # Make a binary
 
-To create an binary you can load **make-binary.lisp** with ecl.
-
-    ecl -load make-binary.lisp
+If you have ecl and a C compiler, just type `make`
 
 You will get a binary named *clic*.
+
+The makefile is a wrapper that call **make-binary.lisp** with ecl.
+
 
 I don't provide a way to generate a binary with sbcl because it
 creates binaries larger than 10 Mb.
