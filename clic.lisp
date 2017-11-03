@@ -12,20 +12,23 @@
   (format nil "~a[~a;~am" #\Escape num1 num2))
 
 (defparameter *links* (make-hash-table))
-(defparameter *types* (list "0" "1" "2" "3" "4" "5" "6" "i"
-			    "h" "7" "8" "9" "+" "T" "g" "I"))
+(defparameter *colors* (make-hash-table))
+(defparameter *allowed-selectors* (list "0" "1" "2" "3" "4" "5" "6" "i"
+					"h" "7" "8" "9" "+" "T" "g" "I"))
 
-;; ansi colors
-(defparameter *red*           (color 1 31))
-(defparameter *white*         (color 0 70))
-(defparameter *color-folder*  (color 4 34))
-(defparameter *green*         (color 1 32))
-(defparameter *color-file*    (color 0 33))
-(defparameter *cyan*          (color 0 46))
+;; ANSI colors
+(defun addcolor(name type hue) (setf (gethash name *colors*) (color type hue)))
+(defun getcolor(name) (gethash name *colors*))
+(addcolor 'red    1 31)
+(addcolor 'white  0 70)
+(addcolor 'folder 4 34)
+(addcolor 'green  1 32)
+(addcolor 'file   0 33)
+(addcolor 'cyan   0 46)
 
-(defun print-with-color(text &optional (color *white*) (line-number nil))
+(defun print-with-color(text &optional (color 'white) (line-number nil))
   "Used to display a line with a color"
-  (format t "~3A| ~a~a~a~%" (if line-number line-number "") color text *white*))
+  (format t "~3A| ~a~a~a~%" (if line-number line-number "") (getcolor color) text (getcolor 'white)))
 
 (defmacro check(identifier &body code)
   "Syntax to make a when easier for formatted-output func"
@@ -38,8 +41,7 @@
 	  counting char into count
 	  when (char= char separator)
 	  collect
-	  
-	  ;; we look at the position of the left separator
+	  ;; we look at the position of the left separator from right to left
 	  (let ((left-separator-position (position separator text :from-end t :end (- count 1))))
 	    (subseq text
 		    ;; if we can't find a separator at the left of the current, then it's the start of
@@ -56,14 +58,13 @@
     ;; section 3.8
     (when (and
 	   (= (length infos) 4)
-	   (member line-type *types* :test #'equal))
+	   (member line-type *allowed-selectors* :test #'equal))
 
       (let ((text (car infos))
 	    (uri  (cadr infos))
 	    (host (caddr infos))
 	    (port (parse-integer (cadddr infos))))
 
-	
 	;; RFC, page 4
 	(check "i"
 	       (print-with-color text))
@@ -72,13 +73,13 @@
 	(check "0"
 	       (setf (gethash line-number *links*)
 		     (make-location :host host :port port :uri uri :type line-type ))
-	       (print-with-color text *color-file* line-number))
+	       (print-with-color text 'file line-number))
 	
 	;; 1 directory
 	(check "1"
 	       (setf (gethash line-number *links*)
 		     (make-location :host host :port port :uri uri :type line-type ))
-	       (print-with-color text *color-folder* line-number))
+	       (print-with-color text 'folder line-number))
 	
 	;; 2 CSO phone-book
 	;; WE SKIP
@@ -86,7 +87,7 @@
 	
 	;; 3 Error
 	(check "3"
-	       (print-with-color "error" *red* line-number))
+	       (print-with-color "error" 'red line-number))
 	
 	;; 4 BinHexed Mac file
 	(check "4"
@@ -118,7 +119,7 @@
 	
 	;; h html link
 	(check "h"
-	       (print-with-color text *color-file* "url"))
+	       (print-with-color text 'file "url"))
 	
 	;; I image
 	(check "I" 'unimplemented)))))
@@ -126,12 +127,12 @@
 (defun getpage(host port uri &optional (type "1"))
   "connect and display"
   
-  
-  
   ;; we reset the links table
-  ;; if we have a new folder
+  ;; ONLY if we have a new folder
   (when (string= "1" type)
     (setf *links* (make-hash-table))
+
+    ;; here we store the location for using "previous" command
     (setf (gethash 0 *links*)
 	  (make-location :host host :port port :uri uri :type type)))
   
@@ -139,6 +140,7 @@
   (let* ((address (sb-bsd-sockets:get-host-by-name host))
 	 (host (car (sb-bsd-sockets:host-ent-addresses address)))
 	 (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
+    
     (sb-bsd-sockets:socket-connect socket host port)
     
     ;; we open a stream for input/output
@@ -148,18 +150,17 @@
       ;; if the selector is 1 we omit it
       (format stream "~a~%" uri)
       (force-output stream)
-
+      
       ;; for each line we receive we display it
       (loop for line = (read-line stream nil nil)
 	    counting line into line-number
-	    while line
-	    do
-	    (cond ((string= "1" type)
-		   (formatted-output line line-number))
-		  
-		  ((string= "0" type)
-		   (format t "~a~%" line))))))
-  (format t "~aRequested gopher://~a:~a/~a~a~a~%" *cyan* host port type uri *white*))
+	    while line do
+	    (cond
+	     ((string= "1" type)
+	      (formatted-output line line-number))
+	     ((string= "0" type)
+	      (format t "~a~%" line))))))
+  (format t "~aRequested gopher://~a:~a/~a~a~a~%" (getcolor 'cyan) host port type uri (getcolor 'white)))
 
 (defun g(key)
   "browse to the N-th link"
