@@ -1,0 +1,8 @@
+# FEATURE
+
+- history mode which save every file into a tree to preserve data if gopherhole go offline
+
+
+# CODE
+
+- store the whole page and deal with it later (but not if it's not a 0 or 1 type)
