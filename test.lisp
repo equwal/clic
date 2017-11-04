@@ -7,10 +7,13 @@
 (g 35) ;; going back
 (g 55) ;; banana !
 (g 0) ;; going back
+(g 26)
+(g 1)
 (p)
 (p)
 
 (print *history*)
+(format t "~%")
 
 
 (quit)
