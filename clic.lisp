@@ -203,7 +203,9 @@
   (format t "clic => ")
   (force-output)
   (loop for user-input = (format nil "~a" (read nil nil))
-	while (not (string= "X" user-input))
+	while (not (or
+		    (string= "X" user-input)
+		    (string= "Q" user-input)))
 	do
 	(cond
 	 ((string= "HELP" user-input)
@@ -213,7 +215,7 @@
 	 ((string= "H" user-input)
 	  (format t "~{~a~%~}" *history*))
 	 (t
-	  (when user-input
+	  (ignore-errors
 	    (g (parse-integer user-input)))))
 	(format t "clic => ")
 	(force-output)))
