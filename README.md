@@ -43,7 +43,8 @@ links. You can exit shell mode with **x**.
 ## Shell mode
 
 - "a number" : follow the link "number"
-- p : display the latest page with links you have seen
+- p : previous page
+- h : display history
 - x : quit shell mode
 
 ## Non shell-mode ##

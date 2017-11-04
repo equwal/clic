@@ -5,7 +5,7 @@
   #+ecl
   (require 'sockets))
 
-(defstruct location host port uri type)
+(defstruct location host port type uri)
 
 (defun color(num1 num2)
   "generate string used to put ANSI color"
@@ -15,6 +15,7 @@
 (defparameter *colors* (make-hash-table))
 (defparameter *allowed-selectors* (list "0" "1" "2" "3" "4" "5" "6" "i"
 					"h" "7" "8" "9" "+" "T" "g" "I"))
+(defparameter *history* '())
 
 ;; ANSI colors
 (defun addcolor(name type hue) (setf (gethash name *colors*) (color type hue)))
@@ -127,14 +128,17 @@
 (defun getpage(host port uri &optional (type "1"))
   "connect and display"
   
-  ;; we reset the links table
-  ;; ONLY if we have a new folder
-  (when (string= "1" type)
-    (setf *links* (make-hash-table))
-
-    ;; here we store the location for using "previous" command
-    (setf (gethash 0 *links*)
-	  (make-location :host host :port port :uri uri :type type)))
+  (let ((here (make-location :host host :port port :uri uri :type type)))
+    
+    ;; goes to the history !
+    (push here *history*)
+    
+    ;; we reset the links table ONLY if we have a new folder
+    ;; and we store the location for "previous" command
+    (when (string= "1" type)
+      (setf *links* (make-hash-table))
+      (setf (gethash 0 *links*) here)))
+  
   
   ;; we prepare informations about the connection
   (let* ((address (sb-bsd-sockets:get-host-by-name host))
@@ -162,13 +166,24 @@
 	      (format t "~a~%" line))))))
   (format t "~aRequested gopher://~a:~a/~a~a~a~%" (getcolor 'cyan) host port type uri (getcolor 'white)))
 
+(defun visit(destination)
+  "visit a location"
+  (getpage (location-host destination)
+	   (location-port destination)
+	   (location-uri  destination)
+	   (location-type destination)))
+
 (defun g(key)
   "browse to the N-th link"
   (let ((destination (gethash key *links*)))
-    (getpage (location-host destination)
-	     (location-port destination)
-	     (location-uri  destination)
-	     (location-type destination))))
+    (when destination
+      (visit destination))))
+
+(defun p()
+  "browse to the previous link"
+  (when (<= 2 (length *history*))
+    (pop *history*)
+    (visit (pop *history*))))
 
 (defun help()
   "show help"
@@ -194,7 +209,9 @@
 	 ((string= "HELP" user-input)
 	  (help-shell))
 	 ((string= "P" user-input)
-	  (g 0))
+	  (p))
+	 ((string= "H" user-input)
+	  (format t "~{~a~%~}" *history*))
 	 (t
 	  (when user-input
 	    (g (parse-integer user-input)))))
