@@ -48,6 +48,7 @@ links. You can exit shell mode with **x**.
 - p : previous page
 - h : display history
 - x : quit shell mode
+- q : quit shell mode
 
 ## Non shell-mode ##
 

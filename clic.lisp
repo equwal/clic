@@ -185,9 +185,10 @@
 (defun help-shell()
   "show help for the shell"
   (format t "number : go to link n~%")
-  (format t "p      : go to previous menu~%")
+  (format t "p      : go to previous page~%")
+  (format t "h      : display history")
   (format t "help   : show this help~%")
-  (format t "x      : exit the shell, go back to REPL~%"))
+  (format t "x or q : exit the shell, go back to REPL~%"))
 
 (defun shell()
   "gNUM p h x"
