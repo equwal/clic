@@ -1,6 +1,8 @@
 # Introduction
 
-Clic (Common LISP Interactive Client) is a gopher client.
+Clic (Common LISP Interactive Client) is a gopher client. The name is
+a bad pun because **clic** is the sound of a mouse click while this
+client is keyboard only...
 
 It currently works with **ecl** and **sbcl** compilers. Just load it
 with sbcl like this
