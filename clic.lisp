@@ -6,11 +6,6 @@
   (require 'sockets))
 
 (defstruct location host port type uri)
-
-(defun color(num1 num2)
-  "generate string used to put ANSI color"
-  (format nil "~a[~a;~am" #\Escape num1 num2))
-
 (defparameter *links* (make-hash-table))
 (defparameter *colors* (make-hash-table))
 (defparameter *allowed-selectors* (list "0" "1" "2" "3" "4" "5" "6" "i"
@@ -18,21 +13,25 @@
 (defparameter *history* '())
 
 ;; ANSI colors
-(defun addcolor(name type hue) (setf (gethash name *colors*) (color type hue)))
-(defun getcolor(name) (gethash name *colors*))
-(addcolor 'red    1 31)
-(addcolor 'white  0 70)
-(addcolor 'folder 4 34)
-(addcolor 'green  1 32)
-(addcolor 'file   0 33)
-(addcolor 'cyan   0 46)
+(defun add-color(name type hue)
+  "Storing a ANSI color string into *colors*"
+  (setf (gethash name *colors*)
+	(format nil "~a[~a;~am" #\Escape type hue)))
+
+(defun get-color(name) (gethash name *colors*))
+(add-color 'red    1 31)
+(add-color 'white  0 70)
+(add-color 'folder 4 34)
+(add-color 'green  1 32)
+(add-color 'file   0 33)
+(add-color 'cyan   0 46)
 
 (defun print-with-color(text &optional (color 'white) (line-number nil))
   "Used to display a line with a color"
-  (format t "~3A| ~a~a~a~%" (if line-number line-number "") (getcolor color) text (getcolor 'white)))
+  (format t "~3A| ~a~a~a~%" (if line-number line-number "") (get-color color) text (get-color 'white)))
 
 (defmacro check(identifier &body code)
-  "Syntax to make a when easier for formatted-output func"
+  "Syntax to make when easier for formatted-output func"
   `(progn (when (string= ,identifier line-type) ,@code)))
 
 (defun split(text separator)
@@ -162,7 +161,14 @@
 		(formatted-output line line-number))
 	       ((string= "0" type)
 		(format t "~a~%" line))))))
-    (format t "~aRequested gopher://~a:~a/~a~a~a~%" (getcolor 'cyan) host port type uri (getcolor 'white))))
+    
+    (format t "~aRequested gopher://~a~a/~a~a~a~%"
+	    (get-color 'cyan)
+	    host
+	    (if (= 70 port ) "" (concatenate 'string ":" (write-to-string port)))
+	    type
+	    uri
+	    (get-color 'white))))
 
 (defun visit(destination)
   "visit a location"
