@@ -54,18 +54,18 @@
   "Used to display gopher response with color one line at a time"
   (let ((line-type (subseq line 0 1))
 	(infos (split (subseq line 1) #\Tab)))
-
+    
     ;; see RFC 1436
     ;; section 3.8
     (when (and
 	   (= (length infos) 4)
 	   (member line-type *allowed-selectors* :test #'equal))
-
+      
       (let ((text (car infos))
 	    (uri  (cadr infos))
 	    (host (caddr infos))
 	    (port (parse-integer (cadddr infos))))
-
+	
 	;; RFC, page 4
 	(check "i"
 	       (print-with-color text))
@@ -134,37 +134,35 @@
     (push here *history*)
     
     ;; we reset the links table ONLY if we have a new folder
-    ;; and we store the location for "previous" command
     (when (string= "1" type)
-      (setf *links* (make-hash-table))
-      (setf (gethash 0 *links*) here)))
+      (setf *links* (make-hash-table)))
   
   
-  ;; we prepare informations about the connection
-  (let* ((address (sb-bsd-sockets:get-host-by-name host))
-	 (host (car (sb-bsd-sockets:host-ent-addresses address)))
-	 (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
-    
-    (sb-bsd-sockets:socket-connect socket host port)
-    
-    ;; we open a stream for input/output
-    (let ((stream (sb-bsd-sockets:socket-make-stream socket :input t :output t)))
+    ;; we prepare informations about the connection
+    (let* ((address (sb-bsd-sockets:get-host-by-name host))
+	   (host (car (sb-bsd-sockets:host-ent-addresses address)))
+	   (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
       
-      ;; sending the request here
-      ;; if the selector is 1 we omit it
-      (format stream "~a~%" uri)
-      (force-output stream)
+      (sb-bsd-sockets:socket-connect socket host port)
       
-      ;; for each line we receive we display it
-      (loop for line = (read-line stream nil nil)
-	    counting line into line-number
-	    while line do
-	    (cond
-	     ((string= "1" type)
-	      (formatted-output line line-number))
-	     ((string= "0" type)
-	      (format t "~a~%" line))))))
-  (format t "~aRequested gopher://~a:~a/~a~a~a~%" (getcolor 'cyan) host port type uri (getcolor 'white)))
+      ;; we open a stream for input/output
+      (let ((stream (sb-bsd-sockets:socket-make-stream socket :input t :output t)))
+	
+	;; sending the request here
+	;; if the selector is 1 we omit it
+	(format stream "~a~%" uri)
+	(force-output stream)
+	
+	;; for each line we receive we display it
+	(loop for line = (read-line stream nil nil)
+	      counting line into line-number
+	      while line do
+	      (cond
+	       ((string= "1" type)
+		(formatted-output line line-number))
+	       ((string= "0" type)
+		(format t "~a~%" line))))))
+    (format t "~aRequested gopher://~a:~a/~a~a~a~%" (getcolor 'cyan) host port type uri (getcolor 'white))))
 
 (defun visit(destination)
   "visit a location"
@@ -184,12 +182,6 @@
   (when (<= 2 (length *history*))
     (pop *history*)
     (visit (pop *history*))))
-
-(defun help()
-  "show help"
-  (format t "HOW TO USE CLI !~%")
-  (format t "(getpage \"host\" port \"uri\")~%")
-  (format t "~%~%"))
 
 (defun help-shell()
   "show help for the shell"
