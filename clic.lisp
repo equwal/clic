@@ -1,3 +1,4 @@
+
 ;; let's hide the loading
 (let ((*standard-output* (make-broadcast-stream)))
   #+sbcl
@@ -160,15 +161,7 @@
 	       ((string= "1" type)
 		(formatted-output line line-number))
 	       ((string= "0" type)
-		(format t "~a~%" line))))))
-    
-    (format t "~aRequested gopher://~a~a/~a~a~a~%"
-	    (get-color 'cyan)
-	    host
-	    (if (= 70 port ) "" (concatenate 'string ":" (write-to-string port)))
-	    type
-	    uri
-	    (get-color 'white))))
+		(format t "~a~%" line))))))))
 
 (defun visit(destination)
   "visit a location"
@@ -226,8 +219,55 @@
 	(format t "clic => ")
 	(force-output)))
 
+(defun parse-url(url)
+  "parse a gopher url and return a location"
+  (let ((url (if (and
+		  ;; if it contains more chars than gopher://
+		  (<= (length "gopher://") (length url))
+		  ;; if it starts with gopher// with return without it
+		  (string= "gopher://" (subseq url 0 9)))
+		 ;; we keep the url as is
+		 (subseq url 9)
+	       url)))
+
+    ;; splitting by / to get host:port and uri
+    (let ((infos (split url #\/)))
+
+      ;; splitting host and port to get them
+      (let ((host-port (split (pop infos) #\:)))
+
+	;; create the location to visit
+	(make-location  :host (pop host-port)
+
+			;; default to port 70 if not supplied
+			:port (if host-port
+				  (parse-integer (car host-port))
+				70)
+
+			;; if type is empty we use "1"
+			:type (let ((type (pop infos)))
+				(if (< 0 (length type)) type "1"))
+
+			;; glue remaining args between them
+			:uri (format nil "~{/~a~}" infos))))))
+
+(defun get-argv()
+  #+sbcl
+  (cadr *posix-argv*)
+  #+ecl
+  (car (last (si::command-args))))
+  
 (defun start()
-  (getpage "bitreich.org" 70 "/")
-  (shell))
+  (let ((destination 
+	 (let ((argv (get-argv)))
+	   (if argv
+	       ;; url as argument
+	       (parse-url argv)
+	     ;; default url
+	     (make-location :host "bitreich.org" :port 70 :uri "/" :type "1")))))
+    (visit destination)
+    (when (string= "1" (location-type destination))
+      (shell))))
+
 
 
