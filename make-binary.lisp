@@ -8,7 +8,7 @@
 #+ecl
 (progn
   (compile-file "clic.lisp" :system-p t)
-  (c:build-program "clic" :epilogue-code '(progn (start)) :lisp-files '("clic.o")))
+  (c:build-program "clic" :epilogue-code '(progn (main)) :lisp-files '("clic.o")))
   ;;(c:build-program "clic" :lisp-files '("clic.o")))
 #+sbcl
 (progn
@@ -18,7 +18,7 @@
   (sb-ext:save-lisp-and-die "clic"
 			    :executable t
 			    :compression 5
-			    :toplevel 'start))
+			    :toplevel 'main))
 
 (format t "INFO => Compilation done (or at least it should)~%")
 (quit)

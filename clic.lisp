@@ -1,4 +1,3 @@
-
 ;; let's hide the loading
 (let ((*standard-output* (make-broadcast-stream)))
   #+sbcl
@@ -258,7 +257,8 @@
   #+ecl
   (car (last (si::command-args))))
   
-(defun start()
+(defun main()
+  "main entry of clic binary"
   (let ((destination 
 	 (let ((argv (get-argv)))
 	   (if argv
