@@ -269,5 +269,8 @@
     (when (string= "1" (location-type destination))
       (shell))))
 
-
-
+;; we allow ecl to use a new kind of argument
+;; not sure how it works but that works
+#+ecl
+(defconstant +uri-rules+
+  '(("*DEFAULT*" 1 "" :stop)))
