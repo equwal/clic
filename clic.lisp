@@ -200,12 +200,20 @@
 		    (string= "Q" user-input)))
 	do
 	(cond
+
+	 ;; show help
 	 ((string= "HELP" user-input)
 	  (help-shell))
+
+	 ;; go to previous page
 	 ((string= "P" user-input)
 	  (p))
+
+	 ;; show history
 	 ((string= "H" user-input)
 	  (format t "~{~a~%~}" *history*))
+
+	 ;; go to a link and ignore invalid input
 	 (t
 	  (ignore-errors
 	    (g (parse-integer user-input)))))
