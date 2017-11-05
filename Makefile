@@ -29,7 +29,8 @@ uninstall:
 clean:
 	rm -f "${BIN}" clic.o clic.eclh clic.cxx
 
-test:
-	${LISP} --load clic.lisp --load test.lisp
+test: clean all
+	@sh run-test.sh ${LISP}
+
 
 .PHONY: all install uninstall clean
