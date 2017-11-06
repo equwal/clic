@@ -11,6 +11,7 @@
 (defparameter *allowed-selectors* (list "0" "1" "2" "3" "4" "5" "6" "i"
 					"h" "7" "8" "9" "+" "T" "g" "I"))
 (defparameter *history* '())
+(defparameter *offline* nil)
 
 ;; ANSI colors
 (defun add-color(name type hue)
@@ -135,8 +136,16 @@
     ;; we reset the links table ONLY if we have a new folder
     (when (string= "1" type)
       (setf *links* (make-hash-table)))
-  
-  
+
+    (when *offline*
+      (ensure-directories-exist (concatenate 'string
+					     "history/"
+					     (location-host here)
+					     "/"
+					     (location-uri here)
+					     "/")))
+
+    
     ;; we prepare informations about the connection
     (let* ((address (sb-bsd-sockets:get-host-by-name host))
 	   (host (car (sb-bsd-sockets:host-ent-addresses address)))
@@ -151,16 +160,31 @@
 	;; if the selector is 1 we omit it
 	(format stream "~a~%" uri)
 	(force-output stream)
-	
-	;; for each line we receive we display it
-	(loop for line = (read-line stream nil nil)
-	      counting line into line-number
-	      while line do
-	      (cond
-	       ((string= "1" type)
-		(formatted-output line line-number))
-	       ((string= "0" type)
-		(format t "~a~%" line))))))))
+
+	(let ((save-offline (if *offline*
+				(open (concatenate 'string
+						   "history/"
+						   (location-host here)
+						   "/"
+						   (location-uri here)
+						   (location-type here))
+				      :direction :output
+				      :if-does-not-exist :create
+				      :if-exists :supersede)
+				nil)))
+	  
+	  ;; for each line we receive we display it
+	  (loop for line = (read-line stream nil nil)
+	     counting line into line-number
+	     while line do
+	       (when save-offline
+		 (format save-offline "~a~%" line))
+	       (cond
+		 ((string= "1" type)
+		  (formatted-output line line-number))
+		 ((string= "0" type)
+		  (format t "~a~%" line))))
+	  (and save-offline (close save-offline)))))))
 
 (defun visit(destination)
   "visit a location"
