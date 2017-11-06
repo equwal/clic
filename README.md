@@ -46,6 +46,8 @@ links. You can exit shell mode with **x**.
 
 - "a number" : follow the link "number"
 - p : previous page
+- a : add to bookmark (it saves the file too)
+- b : display bookmarks and choose a link
 - h : display history
 - x : quit shell mode
 - q : quit shell mode
