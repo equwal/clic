@@ -279,7 +279,7 @@
   #+sbcl
   (cadr *posix-argv*)
   #+ecl
-  (car (last (si::command-args))))
+  (car (last (cdr (si::command-args)))))
   
 (defun main()
   "main entry of clic binary"
