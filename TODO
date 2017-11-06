@@ -1,9 +1,9 @@
 * FEATURE
 
-- TODO add a bookmark "b" function to store the current page location
-- TODO add a bookmark "B" function to display the bookmarks
+- DONE add a bookmark "a" function to store the current page location
+- DONE add a bookmark "b" function to display the bookmarks
 - TODO add a dump "d" function to display the raw response
-- TODO history mode which save every file into a filesystem tree to preserve data if gopherhole go offline
+- DONE history mode which save every file into a filesystem tree to preserve data if gopherhole go offline
 
 
 * CODE
