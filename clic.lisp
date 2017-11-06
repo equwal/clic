@@ -6,12 +6,17 @@
   (require 'sockets))
 
 (defstruct location host port type uri)
+(defparameter *history* '())
+(defparameter *bookmarks* nil)
 (defparameter *links* (make-hash-table))
 (defparameter *colors* (make-hash-table))
 (defparameter *allowed-selectors* (list "0" "1" "2" "3" "4" "5" "6" "i"
 					"h" "7" "8" "9" "+" "T" "g" "I"))
-(defparameter *history* '())
-(defparameter *offline* nil)
+
+;; customizable
+(defparameter *offline* nil) ;; keep files visited on disk
+(defparameter *bookmark-file* "bookmark.lisp") ;; name/location of the bookmark file
+;; end customizable
 
 ;; ANSI colors
 (defun add-color(name type hue)
@@ -205,11 +210,47 @@
     (pop *history*)
     (visit (pop *history*))))
 
+(defun load-bookmark()
+  "Restore the bookmark from file"
+  (when (probe-file *bookmark-file*)
+    (with-open-file (x *bookmark-file* :direction :input)
+    (setf *bookmarks* (read x)))))
+
+(defun save-bookmark()
+  "Dump the bookmark to file"
+  (with-open-file (x *bookmark-file*
+		     :direction :output
+		     :if-does-not-exist :create
+		     :if-exists :supersede)
+    (print *bookmarks* x)))
+
+(defun add-bookmark()
+  "Add a new bookmark"
+  (push (car *history*) *bookmarks*)
+  (save-bookmark))
+
+(defun show-bookmarks()
+  "display the bookmarks like a page"
+  (setf *links* (make-hash-table))
+  (loop for bookmark in *bookmarks*
+     counting bookmark into line-number
+     while bookmark do
+       (progn
+	 (setf (gethash line-number *links*)  bookmark)
+	 (print-with-color (concatenate 'string
+					(location-host bookmark)
+					" "
+					(location-type bookmark)
+					(location-uri bookmark))
+			   'file line-number))))
+
 (defun help-shell()
   "show help for the shell"
   (format t "number : go to link n~%")
   (format t "p      : go to previous page~%")
   (format t "h      : display history~%")
+  (format t "b      : display bookmarks and choose a link from it~%")
+  (format t "a      : add a bookmark~%")
   (format t "help   : show this help~%")
   (format t "x or q : exit the shell, go back to REPL~%"))
 
@@ -227,6 +268,14 @@
 	 ;; show help
 	 ((string= "HELP" user-input)
 	  (help-shell))
+
+	 ;; bookmark current link
+	 ((string= "A" user-input)
+	  (add-bookmark))
+
+	 ;; show bookmarks
+	 ((string= "B" user-input)
+	  (show-bookmarks))
 
 	 ;; go to previous page
 	 ((string= "P" user-input)
@@ -275,6 +324,9 @@
 			;; glue remaining args between them
 			:uri (format nil "~{/~a~}" infos))))))
 
+
+       
+
 (defun get-argv()
   #+sbcl
   (cadr *posix-argv*)
@@ -299,3 +351,5 @@
 #+ecl
 (defconstant +uri-rules+
   '(("*DEFAULT*" 1 "" :stop)))
+
+(load-bookmark)

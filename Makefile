@@ -27,7 +27,7 @@ uninstall:
 	@rm -f "${DESTDIR}${BINDIR}/${BIN}"
 
 clean:
-	rm -f "${BIN}" clic.o clic.eclh clic.cxx
+	rm -f "${BIN}" clic.o clic.eclh clic.cxx bookmark-test
 
 test: clean all
 	@sh run-test.sh ${LISP}
