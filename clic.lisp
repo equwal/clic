@@ -209,7 +209,7 @@
   "show help for the shell"
   (format t "number : go to link n~%")
   (format t "p      : go to previous page~%")
-  (format t "h      : display history")
+  (format t "h      : display history~%")
   (format t "help   : show this help~%")
   (format t "x or q : exit the shell, go back to REPL~%"))
 
