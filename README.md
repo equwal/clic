@@ -34,6 +34,10 @@ create a standalone executable (10 Mb approximately) with sbcl.
 
     make standalone
 
+If you use OpenBSD, you will need wxallowed mountflag on the partition
+from where you try to start clic standalone because sbcl has a W^X
+issue.
+
 # Use it
 
 By default *clic* will load the page **bitreich.org/1/** and make you
