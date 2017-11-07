@@ -10,14 +10,14 @@
 (setf *bookmark-file* "bookmark-test")
 (load-bookmark)
 (p)
-(g 2)
+(g 1)
 (add-bookmark)
 (getpage "bitreich.org" 70 "/")
-(g 11) ;; going to radio
-(g 35) ;; going back
-(g 55) ;; banana !
-(g 0) ;; going back
-(g 26)
+(g 7) ;; going to radio
+(g 1) ;; going back
+(g 21) ;; banana !
+(p) ;; going back
+(g 15)
 (g 1)
 (p)
 (p)

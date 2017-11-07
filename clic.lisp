@@ -180,7 +180,12 @@
 	  
 	  ;; for each line we receive we display it
 	  (loop for line = (read-line stream nil nil)
-	     counting line into line-number
+	     counting
+	       (when (> (length line) 1)
+		 (or
+		  (string= "0" (subseq line 0 1))
+		  (string= "1" (subseq line 0 1))))
+	     into line-number
 	     while line do
 	       (when save-offline
 		 (format save-offline "~a~%" line))
