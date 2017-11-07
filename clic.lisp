@@ -55,7 +55,7 @@
 		    (if left-separator-position (+ 1 left-separator-position) 0) 
 		    (- count 1))))))
 
-(defun formatted-output(line line-number)
+(defun formatted-output(line)
   "Used to display gopher response with color one line at a time"
   (let ((line-type (subseq line 0 1))
 	(infos (split (subseq line 1) #\Tab)))
@@ -66,7 +66,8 @@
 	   (= (length infos) 4)
 	   (member line-type *allowed-selectors* :test #'equal))
       
-      (let ((text (car infos))
+      (let ((line-number (+ 1 (hash-table-count *links*)))
+	    (text (car infos))
 	    (uri  (cadr infos))
 	    (host (caddr infos))
 	    (port (parse-integer (cadddr infos))))
@@ -180,18 +181,12 @@
 	  
 	  ;; for each line we receive we display it
 	  (loop for line = (read-line stream nil nil)
-	     counting
-	       (when (> (length line) 1)
-		 (or
-		  (string= "0" (subseq line 0 1))
-		  (string= "1" (subseq line 0 1))))
-	     into line-number
 	     while line do
 	       (when save-offline
 		 (format save-offline "~a~%" line))
 	       (cond
 		 ((string= "1" type)
-		  (formatted-output line line-number))
+		  (formatted-output line))
 		 ((string= "0" type)
 		  (format t "~a~%" line))))
 	  (and save-offline (close save-offline)))))))
