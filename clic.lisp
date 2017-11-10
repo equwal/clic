@@ -5,20 +5,41 @@
   #+ecl
   (require 'sockets))
 
+;; structure to store links
 (defstruct location host port type uri)
-(defparameter *history* '())
+
+					; BEGIN GLOBAL VARIABLES
+
+;; a list containing the last viewed pages
+(defparameter *history*   '())
+
+;; a list containing the bookmarks
+;; altered by (add-bookmark) and (load-bookmark)
 (defparameter *bookmarks* nil)
-(defparameter *links* (make-hash-table))
-(defparameter *colors* (make-hash-table))
-(defparameter *allowed-selectors* (list "0" "1" "2" "3" "4" "5" "6" "i"
-					"h" "7" "8" "9" "+" "T" "g" "I"))
 
-;; customizable
-(defparameter *offline* nil) ;; keep files visited on disk
-(defparameter *bookmark-file* "bookmark.lisp") ;; name/location of the bookmark file
-;; end customizable
+;; when clic loads a type 1 page, we store location structures here
+;; when clic display the bookmark, we store bookmarks locations here
+(defparameter *links*     (make-hash-table))
 
-;; ANSI colors
+;; Colors for use in the code
+(defparameter *colors*    (make-hash-table))
+
+;; List of allowed item types
+(defparameter *allowed-selectors*
+  (list "0" "1" "2" "3" "4" "5" "6" "i"
+	"h" "7" "8" "9" "+" "T" "g" "I"))
+
+					; BEGIN CUSTOMIZABLE
+;; keep files visited on disk when t
+(defparameter *offline* nil)
+
+;; name/location of the bookmark file
+(defparameter *bookmark-file* "bookmark.lisp")
+					; END CUSTOMIZABLE
+
+					; END GLOBAL VARIABLES
+
+					; BEGIN ANSI colors
 (defun add-color(name type hue)
   "Storing a ANSI color string into *colors*"
   (setf (gethash name *colors*)
@@ -29,8 +50,10 @@
 (add-color 'white  0 70)
 (add-color 'folder 4 34)
 (add-color 'green  1 32)
-(add-color 'file   0 33)
+(add-color 'file   0 35)
 (add-color 'cyan   0 46)
+(add-color 'http   0 33)
+					; END ANSI colors
 
 (defun print-with-color(text &optional (color 'white) (line-number nil))
   "Used to display a line with a color"
@@ -76,7 +99,7 @@
 	(check "i"
 	       (print-with-color text))
 	
-	;; 0 file
+	;; 0 text file
 	(check "0"
 	       (setf (gethash line-number *links*)
 		     (make-location :host host :port port :uri uri :type line-type ))
@@ -124,9 +147,11 @@
 	;; g GIF file
 	(check "g" 'unimplemented)
 	
-	;; h html link
+	;; h http link
 	(check "h"
-	       (print-with-color text 'file "url"))
+	       (print-with-color (concatenate 'string
+					      text " " uri)
+				 'http "url"))
 	
 	;; I image
 	(check "I" 'unimplemented)))))
