@@ -1,4 +1,4 @@
-;; let's hide the loading
+;;;; let's hide the loading
 (let ((*standard-output* (make-broadcast-stream)))
   #+sbcl
   (require 'sb-bsd-sockets)
@@ -8,38 +8,38 @@
 ;; structure to store links
 (defstruct location host port type uri)
 
-					; BEGIN GLOBAL VARIABLES
+;;;; BEGIN GLOBAL VARIABLES
 
-;; a list containing the last viewed pages
+;;; a list containing the last viewed pages
 (defparameter *history*   '())
 
-;; a list containing the bookmarks
-;; altered by (add-bookmark) and (load-bookmark)
+;;; a list containing the bookmarks
+;;; altered by (add-bookmark) and (load-bookmark)
 (defparameter *bookmarks* nil)
 
-;; when clic loads a type 1 page, we store location structures here
-;; when clic display the bookmark, we store bookmarks locations here
+;;; when clic loads a type 1 page, we store location structures here
+;;; when clic display the bookmark, we store bookmarks locations here
 (defparameter *links*     (make-hash-table))
 
-;; Colors for use in the code
+;;; Colors for use in the code
 (defparameter *colors*    (make-hash-table))
 
-;; List of allowed item types
+;;; List of allowed item types
 (defparameter *allowed-selectors*
   (list "0" "1" "2" "3" "4" "5" "6" "i"
 	"h" "7" "8" "9" "+" "T" "g" "I"))
 
-					; BEGIN CUSTOMIZABLE
-;; keep files visited on disk when t
+;;;; BEGIN CUSTOMIZABLE
+;;; keep files visited on disk when t
 (defparameter *offline* nil)
 
-;; name/location of the bookmark file
+;;; name/location of the bookmark file
 (defparameter *bookmark-file* "bookmark.lisp")
-					; END CUSTOMIZABLE
+;;;; END CUSTOMIZABLE
 
-					; END GLOBAL VARIABLES
+;;;; END GLOBAL VARIABLES
 
-					; BEGIN ANSI colors
+;;;; BEGIN ANSI colors
 (defun add-color(name type hue)
   "Storing a ANSI color string into *colors*"
   (setf (gethash name *colors*)
@@ -53,7 +53,7 @@
 (add-color 'file   0 35)
 (add-color 'cyan   0 46)
 (add-color 'http   0 33)
-					; END ANSI colors
+;;;; END ANSI colors
 
 (defun print-with-color(text &optional (color 'white) (line-number nil))
   "Used to display a line with a color"
@@ -257,6 +257,9 @@
 (defun show-bookmarks()
   "display the bookmarks like a page"
   (setf *links* (make-hash-table))
+  
+  ;; for each bookmark we add it to *links*
+  ;; and display it
   (loop for bookmark in *bookmarks*
      counting bookmark into line-number
      while bookmark do
@@ -280,9 +283,11 @@
   (format t "x or q : exit the shell, go back to REPL~%"))
 
 (defun shell()
-  "gNUM p h x"
+  "Shell for user interaction"
   (format t "clic => ")
   (force-output)
+
+  ;; we loop until X or Q is typed
   (loop for user-input = (format nil "~a" (read nil nil))
 	while (not (or
 		    (string= "X" user-input)
@@ -310,8 +315,10 @@
 	 ((string= "H" user-input)
 	  (format t "~{~a~%~}" *history*))
 
-	 ;; go to a link and ignore invalid input
+	 ;; follow a link
 	 (t
+	  ;; we ignore error in case of bad input
+	  ;; just do nothing
 	  (ignore-errors
 	    (g (parse-integer user-input)))))
 	(format t "clic => ")
@@ -350,16 +357,15 @@
 			:uri (format nil "~{/~a~}" infos))))))
 
 
-       
-
 (defun get-argv()
+  "Parse argv and return it"
   #+sbcl
   (cadr *posix-argv*)
   #+ecl
   (car (last (cdr (si::command-args)))))
   
 (defun main()
-  "main entry of clic binary"
+  "fetch argument, display page and go to shell if type is 1"
   (let ((destination 
 	 (let ((argv (get-argv)))
 	   (if argv
