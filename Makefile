@@ -17,8 +17,8 @@ standalone: clic.lisp extension make-binary.lisp
 	${MAKE} -e LISP=sbcl
 
 extension: extension.c
-	cc -fPIC -c extension.c
-	ld -shared -o extension.so extension.o
+	${CC} -Wall -fPIC -c extension.c
+	${LD} -shared -o extension.so extension.o
 
 install: ${BIN}
 	@echo installing executable to "${DESTDIR}${PREFIX}/bin"
