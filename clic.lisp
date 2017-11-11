@@ -9,7 +9,7 @@
 ;;;; SBCL only
 #+sbcl
 (progn
-  (load-shared-object "./extension.so")
+  (load-shared-object #p"./extension.so")
   (declaim (inline getTerminalHeight))
   (sb-alien:define-alien-routine "getTerminalHeight" unsigned-int)
   (defun c-termsize ()
@@ -18,9 +18,15 @@
 
 #+ecl
 (progn
-  "we don't do C binding with ecl"
-  (defun c-termsize()
-    40))
+  (ffi:clines "
+    #include <sys/ioctl.h>
+    #include <limits.h>
+    unsigned int getTerminalHeight()  {
+      struct winsize w; 
+      return ioctl(1,TIOCGWINSZ,&w)<0?UINT_MAX:w.ws_row;}")
+  (ffi:def-function
+      ("getTerminalHeight" c-termsize)
+      () :returning :unsigned-int))
 ;;;; END C binding
 
 ;; structure to store links
