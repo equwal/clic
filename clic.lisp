@@ -348,7 +348,7 @@
       (loop for line across *buffer*
 	 counting line into row
 	 do
-	   (when (= row (- rows 2)) ; -1 for text and another -1, because I want
+	   (when (= row (- rows 1)) ; -1 for text displayed
 	     (setf row 0)
 	     (format t "~a   press enter or a shell command ~a : "
 		     (get-color 'cyan)
