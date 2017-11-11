@@ -5,10 +5,31 @@
   #+ecl
   (require 'sockets))
 
+;;;; C binding to get terminal informations
+;;;; SBCL only
+#+sbcl
+(progn
+  (load-shared-object "./extension.so")
+  (declaim (inline termsize))
+  (sb-alien:define-alien-routine "termsize" int)
+  (defun c-termsize ()
+    "return terminal height"
+    (sb-alien:with-alien ((res int (termsize))))))
+
+#+ecl
+(progn
+  "we don't do C binding with ecl"
+  (defun c-termsize()
+    40))
+;;;; END C binding
+
 ;; structure to store links
 (defstruct location host port type uri)
 
 ;;;; BEGIN GLOBAL VARIABLES
+
+;;; array of lines in buffer
+(defparameter *buffer* nil)
 
 ;;; a list containing the last viewed pages
 (defparameter *history*   '())
@@ -82,7 +103,7 @@
   "Used to display gopher response with color one line at a time"
   (let ((line-type (subseq line 0 1))
 	(infos (split (subseq line 1) #\Tab)))
-    
+
     ;; see RFC 1436
     ;; section 3.8
     (when (and
@@ -156,72 +177,40 @@
 	;; I image
 	(check "I" 'unimplemented)))))
 
-(defun getpage(host port uri &optional (type "1"))
+
+(defun getpage(host port uri)
   "connect and display"
+
+  ;; we reset the buffer
+  (setf *buffer*
+	(make-array 200
+		    :fill-pointer 0
+		    :initial-element nil
+		    :adjustable t))
   
-  (let ((here (make-location :host host :port port :uri uri :type type)))
+  ;; we prepare informations about the connection
+  (let* ((address (sb-bsd-sockets:get-host-by-name host))
+	 (host (car (sb-bsd-sockets:host-ent-addresses address)))
+	 (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
     
-    ;; goes to the history !
-    (push here *history*)
+    (sb-bsd-sockets:socket-connect socket host port)
     
-    ;; we reset the links table ONLY if we have a new folder
-    (when (string= "1" type)
-      (setf *links* (make-hash-table)))
-
-    (when *offline*
-      (ensure-directories-exist (concatenate 'string
-					     "history/"
-					     (location-host here)
-					     "/"
-					     (location-uri here)
-					     "/")))
-
-    
-    ;; we prepare informations about the connection
-    (let* ((address (sb-bsd-sockets:get-host-by-name host))
-	   (host (car (sb-bsd-sockets:host-ent-addresses address)))
-	   (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
+    ;; we open a stream for input/output
+    (let ((stream (sb-bsd-sockets:socket-make-stream socket :input t :output t)))
       
-      (sb-bsd-sockets:socket-connect socket host port)
+      ;; sending the request here
+      ;; if the selector is 1 we omit it
+      (format stream "~a~%" uri)
+      (force-output stream)
       
-      ;; we open a stream for input/output
-      (let ((stream (sb-bsd-sockets:socket-make-stream socket :input t :output t)))
-	
-	;; sending the request here
-	;; if the selector is 1 we omit it
-	(format stream "~a~%" uri)
-	(force-output stream)
+      ;; for each line we receive we display it
+      (loop for line = (read-line stream nil nil)
+	 while line
+	 do
+	   (vector-push line *buffer*)))))
 
-	(let ((save-offline (if *offline*
-				(open (concatenate 'string
-						   "history/"
-						   (location-host here)
-						   "/"
-						   (location-uri here)
-						   (location-type here))
-				      :direction :output
-				      :if-does-not-exist :create
-				      :if-exists :supersede)
-				nil)))
-	  
-	  ;; for each line we receive we display it
-	  (loop for line = (read-line stream nil nil)
-	     while line do
-	       (when save-offline
-		 (format save-offline "~a~%" line))
-	       (cond
-		 ((string= "1" type)
-		  (formatted-output line))
-		 ((string= "0" type)
-		  (format t "~a~%" line))))
-	  (and save-offline (close save-offline)))))))
 
-(defun visit(destination)
-  "visit a location"
-  (getpage (location-host destination)
-	   (location-port destination)
-	   (location-uri  destination)
-	   (location-type destination)))
+
 
 (defun g(key)
   "browse to the N-th link"
@@ -271,7 +260,6 @@
 					(location-type bookmark)
 					(location-uri bookmark))
 			   'file line-number))))
-
 (defun help-shell()
   "show help for the shell"
   (format t "number : go to link n~%")
@@ -282,47 +270,7 @@
   (format t "help   : show this help~%")
   (format t "x or q : exit the shell, go back to REPL~%"))
 
-(defun shell()
-  "Shell for user interaction"
-  (format t "clic => ")
-  (force-output)
 
-  ;; we loop until X or Q is typed
-  (loop for user-input = (format nil "~a" (read nil nil))
-	while (not (or
-		    (string= "X" user-input)
-		    (string= "Q" user-input)))
-	do
-	(cond
-
-	 ;; show help
-	 ((string= "HELP" user-input)
-	  (help-shell))
-
-	 ;; bookmark current link
-	 ((string= "A" user-input)
-	  (add-bookmark))
-
-	 ;; show bookmarks
-	 ((string= "B" user-input)
-	  (show-bookmarks))
-
-	 ;; go to previous page
-	 ((string= "P" user-input)
-	  (p))
-
-	 ;; show history
-	 ((string= "H" user-input)
-	  (format t "~{~a~%~}" *history*))
-
-	 ;; follow a link
-	 (t
-	  ;; we ignore error in case of bad input
-	  ;; just do nothing
-	  (ignore-errors
-	    (g (parse-integer user-input)))))
-	(format t "clic => ")
-	(force-output)))
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
@@ -364,6 +312,120 @@
   #+ecl
   (car (last (cdr (si::command-args)))))
   
+
+
+(defun user-input(input)
+  (cond
+    ;; show help
+    ((string= "HELP" input)
+     (help-shell))
+    
+    ;; bookmark current link
+    ((string= "A" input)
+     (add-bookmark))
+    
+    ;; show bookmarks
+    ((string= "B" input)
+     (show-bookmarks))
+    
+    ;; go to previous page
+    ((string= "P" input)
+     (p))
+
+    ;; exit
+    ((or (string= "X" input)
+	 (string= "Q" input))
+     (quit))
+	  
+    
+    ;; show history
+    ((string= "H" input)
+     (format t "~{~a~%~}" *history*))
+    
+    ;; follow a link
+    (t
+     ;; we ignore error in case of bad input
+     ;; just do nothing
+     (ignore-errors
+       (g (parse-integer input))))))
+
+(defun display-buffer(type)
+  "display the buffer"
+  (let ((rows (c-termsize)))
+    (let ((input nil))
+      (loop for line across *buffer*
+	 counting line into row
+	 do
+	   (when (= row (- rows 3)) ; -1 for text - 1 for input and -1 for can't remember
+	     (setf row 0)
+	     (format t "~a------- press enter to next or a shell command ---------~a~%"
+		     (get-color 'cyan)
+		     (get-color  'white))
+	     (let ((first-input (read-char)))
+	       (when (not (or (char= #\NewLine first-input)
+			      (char= #\Space first-input)))
+		 (unread-char first-input)
+		 (let ((input-text (format nil "~a" (read))))
+		   (setf input input-text)
+		   (loop-finish)))))
+	 (cond
+	   ((string= "1" type)
+	    (formatted-output line))
+	   ((string= "0" type)
+	    (format t "~a~%" line))))
+      (when input
+	(user-input input)))))
+
+(defun visit(destination)
+  "visit a location"
+  
+  (getpage (location-host destination)
+	   (location-port destination)
+	   (location-uri  destination))
+
+  ;; we reset the links table ONLY if we have a new folder
+  (when (string= "1" (location-type destination))
+    (setf *links* (make-hash-table)))
+  
+  ;; goes to the history !
+  (push destination *history*)
+
+  (display-buffer (location-type destination))
+    
+
+  (when *offline*
+    (let ((path (concatenate 'string
+			     "history/" (location-host destination)
+			     "/" (location-uri destination) "/")))
+      (ensure-directories-exist path)
+      
+      (with-open-file
+	  (save-offline (concatenate
+			 'string  path (location-type destination))
+			:direction :output
+			:if-does-not-exist :create
+			:if-exists :supersede)
+	
+	(loop for line in *buffer*
+	   while line
+	   do
+	     (format save-offline "~a~%" line))))))
+
+(defun shell()
+  "Shell for user interaction"
+  (format t "clic => ")
+  (force-output)
+
+  ;; we loop until X or Q is typed
+  (loop for input = (format nil "~a" (read nil nil))
+     while (not (or
+		 (string= "X" input)
+		 (string= "Q" input)))
+     do
+       (user-input input)
+       (format t "clic => ")
+       (force-output)))
+
 (defun main()
   "fetch argument, display page and go to shell if type is 1"
   (let ((destination 

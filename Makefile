@@ -10,11 +10,15 @@ MANDIR = ${PREFIX}/share/man/man1
 
 all: ${BIN}
 
-${BIN}: clic.lisp
+${BIN}: clic.lisp make-binary.lisp
 	${LISP} --load make-binary.lisp
 
-standalone: clic.lisp
+standalone: clic.lisp extension make-binary.lisp
 	${MAKE} -e LISP=sbcl
+
+extension: extension.c
+	cc -fPIC -c extension.c
+	ld -shared -o extension.so extension.o
 
 install: ${BIN}
 	@echo installing executable to "${DESTDIR}${PREFIX}/bin"
@@ -27,7 +31,7 @@ uninstall:
 	@rm -f "${DESTDIR}${BINDIR}/${BIN}"
 
 clean:
-	rm -f "${BIN}" clic.o clic.eclh clic.cxx bookmark-test
+	rm -f "${BIN}" clic.o clic.eclh clic.cxx bookmark-test extension.so
 
 test: clean all
 	@sh run-test.sh ${LISP}

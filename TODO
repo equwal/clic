@@ -8,6 +8,7 @@
 
 * CODE
 
-- TODO find a better color scheme
+- TODO remove the pagination if using stdout or not in shell
+- TODO make the c-termsize working on ecl
 - DONE use CLOS to store data
-- TODO store the whole page and deal with it later (but not if it's not a 0 or 1 type)
+- DONE store the whole page and deal with it later

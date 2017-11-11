@@ -13,6 +13,7 @@
 (g 1)
 (add-bookmark)
 (getpage "bitreich.org" 70 "/")
+(display-buffer "1")
 (g 7) ;; going to radio
 (g 1) ;; going back
 (g 21) ;; banana !
@@ -25,6 +26,7 @@
 (show-bookmarks)
 (g 1)
 
+(print *links*)
 
 (print *history*)
 (format t "~%")
