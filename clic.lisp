@@ -209,9 +209,6 @@
 	 do
 	   (vector-push line *buffer*)))))
 
-
-
-
 (defun g(key)
   "browse to the N-th link"
   (let ((destination (gethash key *links*)))
@@ -270,8 +267,6 @@
   (format t "help   : show this help~%")
   (format t "x or q : exit the shell, go back to REPL~%"))
 
-
-
 (defun parse-url(url)
   "parse a gopher url and return a location"
   (let ((url (if (and
@@ -312,8 +307,6 @@
   #+ecl
   (car (last (cdr (si::command-args)))))
   
-
-
 (defun user-input(input)
   (cond
     ;; show help
@@ -336,7 +329,6 @@
     ((or (string= "X" input)
 	 (string= "Q" input))
      (quit))
-	  
     
     ;; show history
     ((string= "H" input)
@@ -356,14 +348,14 @@
       (loop for line across *buffer*
 	 counting line into row
 	 do
-	   (when (= row (- rows 3)) ; -1 for text - 1 for input and -1 for can't remember
+	   (when (= row (- rows 2)) ; -1 for text and another -1, because I want
 	     (setf row 0)
-	     (format t "~a------- press enter to next or a shell command ---------~a~%"
+	     (format t "~a   press enter or a shell command ~a : "
 		     (get-color 'cyan)
 		     (get-color  'white))
+	     (force-output)
 	     (let ((first-input (read-char)))
-	       (when (not (or (char= #\NewLine first-input)
-			      (char= #\Space first-input)))
+	       (when (not (char= #\NewLine first-input))
 		 (unread-char first-input)
 		 (let ((input-text (format nil "~a" (read))))
 		   (setf input input-text)
