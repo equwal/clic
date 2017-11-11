@@ -10,11 +10,11 @@
 #+sbcl
 (progn
   (load-shared-object "./extension.so")
-  (declaim (inline termsize))
-  (sb-alien:define-alien-routine "termsize" int)
+  (declaim (inline getTerminalHeight))
+  (sb-alien:define-alien-routine "getTerminalHeight" unsigned-int)
   (defun c-termsize ()
     "return terminal height"
-    (sb-alien:with-alien ((res int (termsize))))))
+    (sb-alien:with-alien ((res unsigned-int (getTerminalHeight))))))
 
 #+ecl
 (progn
@@ -96,7 +96,7 @@
 	    (subseq text
 		    ;; if we can't find a separator at the left of the current, then it's the start of
 		    ;; the string
-		    (if left-separator-position (+ 1 left-separator-position) 0) 
+		    (if left-separator-position (+ 1 left-separator-position) 0)
 		    (- count 1))))))
 
 (defun formatted-output(line)
@@ -109,71 +109,71 @@
     (when (and
 	   (= (length infos) 4)
 	   (member line-type *allowed-selectors* :test #'equal))
-      
+
       (let ((line-number (+ 1 (hash-table-count *links*)))
 	    (text (car infos))
 	    (uri  (cadr infos))
 	    (host (caddr infos))
 	    (port (parse-integer (cadddr infos))))
-	
+
 	;; RFC, page 4
 	(check "i"
 	       (print-with-color text))
-	
+
 	;; 0 text file
 	(check "0"
 	       (setf (gethash line-number *links*)
 		     (make-location :host host :port port :uri uri :type line-type ))
 	       (print-with-color text 'file line-number))
-	
+
 	;; 1 directory
 	(check "1"
 	       (setf (gethash line-number *links*)
 		     (make-location :host host :port port :uri uri :type line-type ))
 	       (print-with-color text 'folder line-number))
-	
+
 	;; 2 CSO phone-book
 	;; WE SKIP
 	(check "2")
-	
+
 	;; 3 Error
 	(check "3"
 	       (print-with-color "error" 'red line-number))
-	
+
 	;; 4 BinHexed Mac file
 	(check "4"
 	       (print-with-color text))
-	
+
 	;; 5 DOS Binary archive
 	(check "5" 'unimplemented)
-	
+
 	;; 6 Unix uuencoded file
 	(check "6" 'unimplemented)
-	
+
 	;; 7 Index search server
 	(check "7" 'unimplemented)
-	
+
 	;; 8 Telnet session
 	(check "8" 'unimplemented)
-	
+
 	;; 9 Binary
 	(check "9" 'unimplemented)
-	
+
 	;; + redundant server
 	(check "+" 'unimplemented)
-	
+
 	;; T text based tn3270 session
 	(check "T" 'unimplemented)
-	
+
 	;; g GIF file
 	(check "g" 'unimplemented)
-	
+
 	;; h http link
 	(check "h"
 	       (print-with-color (concatenate 'string
 					      text " " uri)
 				 'http "url"))
-	
+
 	;; I image
 	(check "I" 'unimplemented)))))
 
@@ -187,22 +187,22 @@
 		    :fill-pointer 0
 		    :initial-element nil
 		    :adjustable t))
-  
+
   ;; we prepare informations about the connection
   (let* ((address (sb-bsd-sockets:get-host-by-name host))
 	 (host (car (sb-bsd-sockets:host-ent-addresses address)))
 	 (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
-    
+
     (sb-bsd-sockets:socket-connect socket host port)
-    
+
     ;; we open a stream for input/output
     (let ((stream (sb-bsd-sockets:socket-make-stream socket :input t :output t)))
-      
+
       ;; sending the request here
       ;; if the selector is 1 we omit it
       (format stream "~a~%" uri)
       (force-output stream)
-      
+
       ;; for each line we receive we display it
       (loop for line = (read-line stream nil nil)
 	 while line
@@ -243,7 +243,7 @@
 (defun show-bookmarks()
   "display the bookmarks like a page"
   (setf *links* (make-hash-table))
-  
+
   ;; for each bookmark we add it to *links*
   ;; and display it
   (loop for bookmark in *bookmarks*
@@ -306,21 +306,21 @@
   (cadr *posix-argv*)
   #+ecl
   (car (last (cdr (si::command-args)))))
-  
+
 (defun user-input(input)
   (cond
     ;; show help
     ((string= "HELP" input)
      (help-shell))
-    
+
     ;; bookmark current link
     ((string= "A" input)
      (add-bookmark))
-    
+
     ;; show bookmarks
     ((string= "B" input)
      (show-bookmarks))
-    
+
     ;; go to previous page
     ((string= "P" input)
      (p))
@@ -329,11 +329,11 @@
     ((or (string= "X" input)
 	 (string= "Q" input))
      (quit))
-    
+
     ;; show history
     ((string= "H" input)
      (format t "~{~a~%~}" *history*))
-    
+
     ;; follow a link
     (t
      ;; we ignore error in case of bad input
@@ -370,7 +370,7 @@
 
 (defun visit(destination)
   "visit a location"
-  
+
   (getpage (location-host destination)
 	   (location-port destination)
 	   (location-uri  destination))
@@ -378,26 +378,26 @@
   ;; we reset the links table ONLY if we have a new folder
   (when (string= "1" (location-type destination))
     (setf *links* (make-hash-table)))
-  
+
   ;; goes to the history !
   (push destination *history*)
 
   (display-buffer (location-type destination))
-    
+
 
   (when *offline*
     (let ((path (concatenate 'string
 			     "history/" (location-host destination)
 			     "/" (location-uri destination) "/")))
       (ensure-directories-exist path)
-      
+
       (with-open-file
 	  (save-offline (concatenate
 			 'string  path (location-type destination))
 			:direction :output
 			:if-does-not-exist :create
 			:if-exists :supersede)
-	
+
 	(loop for line in *buffer*
 	   while line
 	   do
@@ -420,7 +420,7 @@
 
 (defun main()
   "fetch argument, display page and go to shell if type is 1"
-  (let ((destination 
+  (let ((destination
 	 (let ((argv (get-argv)))
 	   (if argv
 	       ;; url as argument
