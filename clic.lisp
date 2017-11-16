@@ -87,7 +87,7 @@
   (format t "~3A| ~a~a~a~%" (if line-number line-number "") (get-color color) text (get-color 'white)))
 
 (defmacro check(identifier &body code)
-  "Syntax to make when easier for formatted-output func"
+  "Macro to define a new syntax to make 'when' easier for formatted-output function"
   `(progn (when (string= ,identifier line-type) ,@code)))
 
 (defun split(text separator)
@@ -151,38 +151,46 @@
 	       (print-with-color text))
 
 	;; 5 DOS Binary archive
-	(check "5" 'unimplemented)
+	(check "5"
+	       (print-with-color "selector 5 not implemented" 'red))
 
 	;; 6 Unix uuencoded file
-	(check "6" 'unimplemented)
+	(check "6" 
+	       (print-with-color "selector 6 not implemented" 'red))
 
 	;; 7 Index search server
-	(check "7" 'unimplemented)
+	(check "7" 
+	       (print-with-color "selector 7 not implemented" 'red))
 
 	;; 8 Telnet session
-	(check "8" 'unimplemented)
+	(check "8" 
+	       (print-with-color "selector 8 not implemented" 'red))
 
 	;; 9 Binary
-	(check "9" 'unimplemented)
+	(check "9" 
+	       (print-with-color "selector 9 not implemented" 'red))
 
 	;; + redundant server
-	(check "+" 'unimplemented)
+	(check "+" 
+	       (print-with-color "selector + not implemented" 'red))
 
 	;; T text based tn3270 session
-	(check "T" 'unimplemented)
+	(check "T" 
+	       (print-with-color "selector T not implemented" 'red))
 
 	;; g GIF file
-	(check "g" 'unimplemented)
+	(check "g" 
+	       (print-with-color "selector g not implemented" 'red))
+
+	;; I image
+	(check "I"
+	       (print-with-color "selector I not implemented" 'red))
 
 	;; h http link
 	(check "h"
 	       (print-with-color (concatenate 'string
 					      text " " uri)
-				 'http "url"))
-
-	;; I image
-	(check "I" 'unimplemented)))))
-
+				 'http "url"))))))
 
 (defun getpage(host port uri)
   "connect and display"
