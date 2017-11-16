@@ -3,20 +3,20 @@
 .POSIX:
 
 BIN    = clic
-LISP   = ecl
+LISP   = sbcl
 PREFIX = /usr
 BINDIR = ${PREFIX}/bin
 MANDIR = ${PREFIX}/share/man/man1
 
-all: ${BIN}
+all: extension.so ${BIN}
 
 ${BIN}: clic.lisp make-binary.lisp
 	${LISP} --load make-binary.lisp
 
-standalone: clic.lisp extension make-binary.lisp
+standalone: clic.lisp extension.so make-binary.lisp
 	${MAKE} -e LISP=sbcl
 
-extension: extension.c
+extension.so: extension.c
 	${CC} -Wall -fPIC -c extension.c
 	${LD} -shared -o extension.so extension.o
 
