@@ -21,8 +21,13 @@ proc user_input {} {
 
     send "19\n"
     expect " : "
+    send "\nr\n"
+    expect " : "
 
     send "p\n"
+    expect "clic => "
+
+    send "r\n"
     expect "clic => "
     
     send "h\n"
@@ -61,33 +66,38 @@ expect "* "
 
 send "(main)\n"
 set running [user_input]
-send "quit\n"
+send "(pop *history*) (p) (r)\n"
+expect "* "
+
+send "19\n"
+expect " : "
+send "q\n"
 expect "* "
 
 send "(main)\n"
 expect "clic => "
 
+send "exit\n"
+expect "* "
+
+
+# add an argv to test argv parsing
+send "(setf *posix-argv* '(\"sbcl\" \"gopher://bitreich.org/0/documents/bitreich-manifesto.md\"))\n"
+expect "* "
+
+send "(main)\n"
+expect " : "
 send "q\n"
 expect "* "
 
-send "(pop *history*) (p) (r)\n"
-expect "* "
-
 
 # add an argv to test argv parsing
-send "(setf *posix-argv* '(\"sbcl\" \"gopher://bitreich.org/0/usr/\"))\n"
-expect "* "
-
-send "(main)\n"
-expect "* "
-
-
-# add an argv to test argv parsing
-send "(setf *posix-argv* '(\"sbcl\" \"bitreich.org/0/usr/\"))\n"
+send "(setf *posix-argv* '(\"sbcl\" \"bitreich.org/1/usr/solene/\"))\n"
 expect "* "
 send "(main)\n"
+expect "clic => "
+send "q\n"
 expect "* "
-
 
 
 # add an argv to test argv parsing

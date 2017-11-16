@@ -22,7 +22,7 @@
     #include <sys/ioctl.h>
     #include <limits.h>
     unsigned int getTerminalHeight()  {
-      struct winsize w; 
+      struct winsize w;
       return ioctl(1,TIOCGWINSZ,&w)<0?UINT_MAX:w.ws_row;}")
   (ffi:def-function
       ("getTerminalHeight" c-termsize)
@@ -155,31 +155,31 @@
 	       (print-with-color "selector 5 not implemented" 'red))
 
 	;; 6 Unix uuencoded file
-	(check "6" 
+	(check "6"
 	       (print-with-color "selector 6 not implemented" 'red))
 
 	;; 7 Index search server
-	(check "7" 
+	(check "7"
 	       (print-with-color "selector 7 not implemented" 'red))
 
 	;; 8 Telnet session
-	(check "8" 
+	(check "8"
 	       (print-with-color "selector 8 not implemented" 'red))
 
 	;; 9 Binary
-	(check "9" 
+	(check "9"
 	       (print-with-color "selector 9 not implemented" 'red))
 
 	;; + redundant server
-	(check "+" 
+	(check "+"
 	       (print-with-color "selector + not implemented" 'red))
 
 	;; T text based tn3270 session
-	(check "T" 
+	(check "T"
 	       (print-with-color "selector T not implemented" 'red))
 
 	;; g GIF file
-	(check "g" 
+	(check "g"
 	       (print-with-color "selector g not implemented" 'red))
 
 	;; I image
@@ -373,11 +373,23 @@
 (defun display-buffer(type)
   "display the buffer"
   (let ((rows (c-termsize)))
+
+    ;; we store the user input outside of the loop
+    ;; so if the user doesn't want to scroll
+    ;; we break the loop and then execute the command
     (let ((input nil))
       (loop for line across *buffer*
 	 counting line into row
 	 do
-	   (when (= row (- rows 1)) ; -1 for text displayed
+	   ;; display lines
+	   (cond
+	     ((string= "1" type)
+	      (formatted-output line))
+	     ((string= "0" type)
+	      (format t "~a~%" line)))
+
+	   ;; split and ask to scroll or to type a command
+	   (when (= row rows) ; -1 for text displayed
 	     (setf row 0)
 	     (format t "~a   press enter or a shell command ~a : "
 		     (get-color 'cyan)
@@ -386,14 +398,11 @@
 	     (let ((first-input (read-char)))
 	       (when (not (char= #\NewLine first-input))
 		 (unread-char first-input)
-		 (let ((input-text (format nil "~a" (read))))
+		 (let ((input-text (format nil "~a" (read-line nil nil))))
 		   (setf input input-text)
-		   (loop-finish)))))
-	 (cond
-	   ((string= "1" type)
-	    (formatted-output line))
-	   ((string= "0" type)
-	    (format t "~a~%" line))))
+		   (loop-finish))))))
+
+      ;; in case of shell command, do it
       (when input
 	(user-input input)))))
 
@@ -411,9 +420,6 @@
   ;; goes to the history !
   (push destination *history*)
 
-  (display-buffer (location-type destination))
-
-
   (when *offline*
     (let ((path (concatenate 'string
 			     "history/" (location-host destination)
@@ -427,10 +433,13 @@
 			:if-does-not-exist :create
 			:if-exists :supersede)
 
-	(loop for line in *buffer*
+	(loop for line across *buffer*
 	   while line
 	   do
-	     (format save-offline "~a~%" line))))))
+	     (format save-offline "~a~%" line)))))
+
+  (display-buffer (location-type destination)))
+
 
 (defun shell()
   "Shell for user interaction"
