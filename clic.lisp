@@ -235,6 +235,12 @@
     (pop *history*)
     (visit (pop *history*))))
 
+(defun r()
+  "browse to the previous link"
+  (when (<= 1 (length *history*))
+    (visit (pop *history*))))
+
+
 (defun load-bookmark()
   "Restore the bookmark from file"
   (when (probe-file *bookmark-file*)
@@ -324,28 +330,37 @@
 (defun user-input(input)
   (cond
     ;; show help
-    ((string= "HELP" input)
+    ((string= "help" input)
      (help-shell))
 
     ;; bookmark current link
-    ((string= "A" input)
+    ((string= "a" input)
      (add-bookmark))
 
     ;; show bookmarks
-    ((string= "B" input)
+    ((string= "b" input)
      (show-bookmarks))
 
+    ((or
+      (string= "ls" input)
+      (string= "r" input))
+     (r))
+
     ;; go to previous page
-    ((string= "P" input)
+    ((or
+      (string= "cd .." input)
+      (string= "p" input))
      (p))
 
     ;; exit
-    ((or (string= "X" input)
-	 (string= "Q" input))
-     (quit))
+    ((or
+      (string= "exit" input)
+      (string= "x" input)
+      (string= "q" input))
+     'end)
 
     ;; show history
-    ((string= "H" input)
+    ((string= "h" input)
      (format t "~{~a~%~}" *history*))
 
     ;; follow a link
@@ -423,12 +438,14 @@
   (force-output)
 
   ;; we loop until X or Q is typed
-  (loop for input = (format nil "~a" (read nil nil))
+  (loop for input = (format nil "~a" (read-line nil nil))
      while (not (or
-		 (string= "X" input)
-		 (string= "Q" input)))
+		 (string= "exit" input)
+		 (string= "x" input)
+		 (string= "q" input)))
      do
-       (user-input input)
+       (when (eq 'end (user-input input))
+	   (loop-finish))
        (format t "clic => ")
        (force-output)))
 
@@ -439,11 +456,14 @@
 	   (if argv
 	       ;; url as argument
 	       (parse-url argv)
-	     ;; default url
-	     (make-location :host "bitreich.org" :port 70 :uri "/" :type "1")))))
-    (visit destination)
-    (when (string= "1" (location-type destination))
-      (shell))))
+	       ;; default url
+	       (make-location :host "bitreich.org" :port 70 :uri "/" :type "1")))))
+
+    ;; if user want to drop from first page we need
+    ;; to look it here
+    (when (not (eq 'end (visit destination)))
+      (when (string= "1" (location-type destination))
+	(shell)))))
 
 ;; we allow ecl to use a new kind of argument
 ;; not sure how it works but that works

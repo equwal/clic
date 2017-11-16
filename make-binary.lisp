@@ -1,5 +1,5 @@
-;; ecl produces a linked binary
-;; while sbcl produces a static binary (but huge ~ 10Mb)
+;; ecl produces a linked binary to ecl shared library
+;; sbcl produces a static binary (~ 10Mb with compression / 70Mb without)
 
 #+ecl
 (require 'cmp)
@@ -24,5 +24,5 @@
 			    :executable t
 			    :toplevel 'main))
 
-(format t "INFO => Compilation done (or at least it should)~%")
+(format t "INFO => Compilation done (or at least it should be)~%")
 (quit)
