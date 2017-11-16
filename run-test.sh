@@ -2,6 +2,8 @@
 
 LISP=$1
 
+expect -f interactive-test.exp
+
 ${LISP} --load clic.lisp --load test.lisp
 
 ./clic gopher://bitreich.org:70/0/  | md5sum -
