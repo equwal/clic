@@ -49,10 +49,11 @@ links. You can exit shell mode with **x**.
 ## Shell mode
 
 - "a number" : follow the link "number"
-- p : previous page
 - a : add to bookmark (it saves the file too)
 - b : display bookmarks and choose a link
+- p : previous page
 - h : display history
+- r : reload the page
 - x : quit shell mode
 - q : quit shell mode
 

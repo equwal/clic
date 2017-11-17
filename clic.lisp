@@ -284,6 +284,7 @@
   (format t "h      : display history~%")
   (format t "b      : display bookmarks and choose a link from it~%")
   (format t "a      : add a bookmark~%")
+  (format t "r      : reload the page~%")
   (format t "help   : show this help~%")
   (format t "x or q : exit the shell, go back to REPL~%"))
 
