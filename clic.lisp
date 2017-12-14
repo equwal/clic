@@ -268,7 +268,8 @@
   ;; and display it
   (loop for bookmark in *bookmarks*
      counting bookmark into line-number
-     while bookmark do
+     while bookmark
+     do
        (progn
 	 (setf (gethash line-number *links*)  bookmark)
 	 (print-with-color (concatenate 'string
@@ -404,8 +405,11 @@
 		   (loop-finish))))))
 
       ;; in case of shell command, do it
-      (when input
-	(user-input input)))))
+      (if input
+          (user-input input)
+          (when (< (length *buffer*) rows)
+            (dotimes (i (- rows (length *buffer*)))
+              (format t "~%")))))))
 
 (defun visit(destination)
   "visit a location"
