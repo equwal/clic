@@ -374,7 +374,7 @@
 
 (defun display-buffer(type)
   "display the buffer"
-  (let ((rows (c-termsize)))
+  (let ((rows (- (c-termsize) 1))) ; -1 for command bar
 
     ;; we store the user input outside of the loop
     ;; so if the user doesn't want to scroll
@@ -391,7 +391,7 @@
 	      (format t "~a~%" line)))
 
 	   ;; split and ask to scroll or to type a command
-	   (when (= row rows) ; -1 for text displayed
+	   (when (= row rows)
 	     (setf row 0)
 	     (format t "~a   press enter or a shell command ~a : "
 		     (get-color 'cyan)
