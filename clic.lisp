@@ -81,13 +81,14 @@
         (format nil "~a[~a;~am" #\Escape type hue)))
 
 (defun get-color(name) (gethash name *colors*))
-(add-color 'red    1 31)
-(add-color 'white  0 70)
-(add-color 'folder 4 34)
-(add-color 'green  1 32)
-(add-color 'file   0 35)
-(add-color 'cyan   0 46)
-(add-color 'http   0 33)
+(add-color 'red        1 31)
+(add-color 'white      0 70)
+(add-color 'bg-black   0 40)
+(add-color 'folder     4 34)
+(add-color 'green      1 32)
+(add-color 'file       0 35)
+(add-color 'cyan       0 46)
+(add-color 'http       0 33)
 ;;;; END ANSI colors
 
 ;;;; is the output interactive or a pipe ?
@@ -429,8 +430,8 @@
                (when (= row rows)
                  (setf row 0)
                  (format t "~a   press enter or a shell command ~a : "
-                         (get-color 'cyan)
-                         (get-color  'white))
+                         (get-color 'bg-black)
+                         (get-color 'white))
                  (force-output)
                  (let ((first-input (read-char)))
                    (when (not (char= #\NewLine first-input))
@@ -486,11 +487,18 @@
 
   (display-buffer (location-type destination)))
 
+(defun display-prompt()
+  (let ((last-page (car *history*)))
+    (format t "gopher://~a:~a/~a~a : "
+            (location-host last-page)
+            (location-port last-page)
+            (location-type last-page)
+            (location-uri last-page)))
+  (force-output))
 
 (defun shell()
   "Shell for user interaction"
-  (format t "clic => ")
-  (force-output)
+  (display-prompt)
 
   ;; we loop until X or Q is typed
   (loop for input = (format nil "~a" (read-line nil nil))
@@ -501,8 +509,7 @@
      do
        (when (eq 'end (user-input input))
          (loop-finish))
-       (format t "clic => ")
-       (force-output)))
+       (display-prompt)))
 
 (defun main()
   "fetch argument, display page and go to shell if type is 1"
