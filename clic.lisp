@@ -298,14 +298,14 @@
 			   'file line-number))))
 (defun help-shell()
   "show help for the shell"
-  (format t "number : go to link n~%")
-  (format t "p      : go to previous page~%")
-  (format t "h      : display history~%")
-  (format t "b      : display bookmarks and choose a link from it~%")
-  (format t "a      : add a bookmark~%")
-  (format t "r      : reload the page~%")
-  (format t "help   : show this help~%")
-  (format t "x or q : exit the shell, go back to REPL~%"))
+  (format t "number      : go to link n~%")
+  (format t "p or /      : go to previous page~%")
+  (format t "h           : display history~%")
+  (format t "b or -      : display bookmarks and choose a link from it~%")
+  (format t "a or +      : add a bookmark~%")
+  (format t "r or *      : reload the page~%")
+  (format t "help        : show this help~%")
+  (format t "x or q or . : exit the shell, go back to REPL~%"))
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
@@ -354,26 +354,33 @@
      (help-shell))
 
     ;; bookmark current link
-    ((string= "a" input)
+    ((or
+      (string= "a" input)
+      (string= "+" input))
      (add-bookmark))
 
     ;; show bookmarks
-    ((string= "b" input)
+    ((or
+      (string= "b" input)
+      (string= "-" input))
      (show-bookmarks))
 
     ((or
+      (string= "*" input)
       (string= "ls" input)
       (string= "r" input))
      (r))
 
     ;; go to previous page
     ((or
+      (string= "/" input)
       (string= "cd .." input)
       (string= "p" input))
      (p))
 
     ;; exit
     ((or
+      (string= "." input)
       (string= "exit" input)
       (string= "x" input)
       (string= "q" input))
