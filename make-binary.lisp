@@ -1,6 +1,7 @@
 ;; ecl produces a linked binary to ecl shared library
 ;; sbcl produces a static binary (~ 10Mb with compression / 70Mb without)
 
+(require 'asdf)
 #+ecl
 (require 'cmp)
 #+ecl

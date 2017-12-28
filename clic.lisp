@@ -1,9 +1,11 @@
 ;;;; let's hide the loading
 (let ((*standard-output* (make-broadcast-stream)))
+  (require 'asdf)
   #+sbcl
   (require 'sb-bsd-sockets)
   #+ecl
   (require 'sockets))
+
 
 ;;;; C binding to get terminal informations
 ;;;; SBCL only
@@ -38,7 +40,8 @@
 ;;;; END C binding
 
 ;; structure to store links
-(defstruct location host port type uri)
+(defstruct location host port type uri
+           :predicate)
 
 ;;;; BEGIN GLOBAL VARIABLES
 
@@ -82,7 +85,7 @@
 
 (defun get-color(name) (gethash name *colors*))
 (add-color 'red        1 31)
-(add-color 'white      0 70)
+(add-color 'reset      0 70)
 (add-color 'bg-black   0 40)
 (add-color 'folder     4 34)
 (add-color 'green      1 32)
@@ -101,9 +104,9 @@
       t
       nil))
 
-(defun print-with-color(text &optional (color 'white) (line-number nil))
+(defun print-with-color(text &optional (color 'reset) (line-number nil))
   "Used to display a line with a color"
-  (format t "~3A| ~a~a~a~%" (if line-number line-number "") (get-color color) text (get-color 'white)))
+  (format t "~3A| ~a~a~a~%" (if line-number line-number "") (get-color color) text (get-color 'reset)))
 
 (defmacro check(identifier &body code)
   "Macro to define a new syntax to make 'when' easier for formatted-output function"
@@ -209,9 +212,9 @@
 
               ;; h http link
               (check "h"
-                     (print-with-color (concatenate 'string
-                                                    text " " uri)
-                                       'http "url")))
+                     (setf (gethash line-number *links*) uri)
+                     (print-with-color text 'http line-number)))
+
             ;; unknown type
             (print-with-color (format nil
                                       "invalid type ~a : ~a" line-type text)
@@ -252,7 +255,17 @@
   "browse to the N-th link"
   (let ((destination (gethash key *links*)))
     (when destination
-      (visit destination))))
+      (print destination)
+      (cond
+
+        ;; visit a gopher link
+        ((location-p destination)
+         (visit destination))
+
+        ;; visit http link
+        ((search "URL:" destination)
+         (uiop:run-program (list "xdg-open"
+                                 (subseq destination 4))))))))
 
 (defun p()
   "browse to the previous link"
@@ -431,7 +444,7 @@
                  (setf row 0)
                  (format t "~a   press enter or a shell command ~a : "
                          (get-color 'bg-black)
-                         (get-color 'white))
+                         (get-color 'reset))
                  (force-output)
                  (let ((first-input (read-char)))
                    (when (not (char= #\NewLine first-input))
