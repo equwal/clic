@@ -47,6 +47,8 @@
 
 ;;; array of lines in buffer
 (defparameter *buffer* nil)
+;;; array of lines of last menu
+(defparameter *previous-buffer* nil)
 
 ;;; a list containing the last viewed pages
 (defparameter *history*   '())
@@ -245,6 +247,9 @@
       (format stream "~a~%" uri)
       (force-output stream)
 
+      ;; save current buffer to display it back if needed
+      (setf *previous-buffer* *buffer*)
+
       ;; for each line we receive we display it
       (loop for line = (read-line stream nil nil)
          while line
@@ -255,10 +260,8 @@
   "browse to the N-th link"
   (let ((destination (gethash key *links*)))
     (when destination
-      (print destination)
       (cond
-
-        ;; visit a gopher link
+        ;; visit a gopher link (type 0 or 1)
         ((location-p destination)
          (visit destination))
 
@@ -420,45 +423,67 @@
 (defun display-buffer(type)
   "display the buffer"
 
-  ;; stdout is a terminal or not ?
+  ;;;; stdout is a terminal or not ?
   (if (ttyp)
-      ;; yes it is
-      (let ((rows (- (c-termsize) 1))) ; -1 for command bar
+      ;;;; we are in interactive mode
+      (cond
+        ;;;; output is a text file ?
+        ;;;; call the $PAGER !
+        ((string= "0" type)
+         (pop *history*) ;; it's not a menu, we need to remove it from history
+         ;;; generate a string from *buffer* array
+         (let ((text (string-right-trim ; remove last newline
+                      (string #\Newline)
+                      (format nil "~{~a~%~}" ; concatenate lines
+                              (loop for line across *buffer*
+                                 collect line)))))
+           ;; create input stream used as stdin for $PAGER
+           (let ((input (make-string-input-stream text)))
+             (uiop:run-program (list #+ecl
+                                     (si:getenv "PAGER")
+                                     #+sbcl
+                                     (sb-unix::posix-getenv "PAGER"))
+                               :input input
+                               :output :interactive))
+           ;; display last menu
+           (setf *buffer* *previous-buffer*)
+           (display-buffer "1")))
 
-        ;; we store the user input outside of the loop
-        ;; so if the user doesn't want to scroll
-        ;; we break the loop and then execute the command
-        (let ((input nil))
-          (loop for line across *buffer*
-             counting line into row
-             do
-             ;; display lines
-               (cond
-                 ((string= "1" type)
-                  (formatted-output line))
-                 ((string= "0" type)
-                  (format t "~a~%" line)))
+        ;;;; output is a menu ?
+        ;;;; display the menu and split it in pages if needed
+        ((string= "1" type)
 
-             ;; split and ask to scroll or to type a command
-               (when (= row rows)
-                 (setf row 0)
-                 (format t "~a   press enter or a shell command ~a : "
-                         (get-color 'bg-black)
-                         (get-color 'reset))
-                 (force-output)
-                 (let ((first-input (read-char)))
-                   (when (not (char= #\NewLine first-input))
-                     (unread-char first-input)
-                     (let ((input-text (format nil "~a" (read-line nil nil))))
-                       (setf input input-text)
-                       (loop-finish))))))
+         ;; we store the user input outside of the loop
+         ;; so if the user doesn't want to scroll
+         ;; we break the loop and then execute the command
+         (let ((input nil))
+           (let ((rows (- (c-termsize) 1))) ; -1 for command bar
 
-          ;; in case of shell command, do it
-          (if input
-              (user-input input)
-              (when (< (length *buffer*) rows)
-                (dotimes (i (- rows (length *buffer*)))
-                  (format t "~%"))))))
+             (loop for line across *buffer*
+                counting line into row
+                do
+                  (formatted-output line)
+
+                ;; split and ask to scroll or to type a command
+                  (when (= row rows)
+                    (setf row 0)
+                    (format t "~a   press enter or a shell command ~a : "
+                            (get-color 'bg-black)
+                            (get-color 'reset))
+                    (force-output)
+                    (let ((first-input (read-char)))
+                      (when (not (char= #\NewLine first-input))
+                        (unread-char first-input)
+                        (let ((input-text (format nil "~a" (read-line nil nil))))
+                          (setf input input-text)
+                          (loop-finish))))))
+
+             ;; in case of shell command, do it
+             (if input
+                 (user-input input)
+                 (when (< (length *buffer*) rows)
+                   (dotimes (i (- rows (length *buffer*)))
+                     (format t "~%"))))))))
 
       ;; not interactive
       ;; display and quit
