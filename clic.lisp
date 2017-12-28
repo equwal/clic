@@ -10,23 +10,31 @@
 #+sbcl
 (progn
   (load-shared-object #p"./extension.so")
+  ;; getTerminalHeight
   (declaim (inline getTerminalHeight))
   (sb-alien:define-alien-routine "getTerminalHeight" unsigned-int)
   (defun c-termsize ()
     "return terminal height"
     (sb-alien:with-alien ((res unsigned-int (getTerminalHeight))))))
 
+
 #+ecl
 (progn
   (ffi:clines "
     #include <sys/ioctl.h>
     #include <limits.h>
+    #include <unistd.h>
+    int ttyPredicate() {
+      return isatty(fileno(stdout)); }
     unsigned int getTerminalHeight()  {
       struct winsize w;
       return ioctl(1,TIOCGWINSZ,&w)<0?UINT_MAX:w.ws_row;}")
   (ffi:def-function
       ("getTerminalHeight" c-termsize)
-      () :returning :unsigned-int))
+      () :returning :unsigned-int)
+  (ffi:def-function
+      ("ttyPredicate" c-ttyp)
+      () :returning :int))
 ;;;; END C binding
 
 ;; structure to store links
@@ -81,6 +89,16 @@
 (add-color 'cyan   0 46)
 (add-color 'http   0 33)
 ;;;; END ANSI colors
+
+;;;; is the output interactive or a pipe ?
+
+(defun ttyp()
+  #+sbcl
+  (interactive-stream-p *standard-output*)
+  #+ecl
+  (if (= 1 (c-ttyp))
+      t
+      nil))
 
 (defun print-with-color(text &optional (color 'white) (line-number nil))
   "Used to display a line with a color"
@@ -374,42 +392,52 @@
 
 (defun display-buffer(type)
   "display the buffer"
-  (let ((rows (- (c-termsize) 1))) ; -1 for command bar
 
-    ;; we store the user input outside of the loop
-    ;; so if the user doesn't want to scroll
-    ;; we break the loop and then execute the command
-    (let ((input nil))
+  ;; stdout is a terminal or not ?
+  (if (ttyp)
+      ;; yes it is
+      (let ((rows (- (c-termsize) 1))) ; -1 for command bar
+
+        ;; we store the user input outside of the loop
+        ;; so if the user doesn't want to scroll
+        ;; we break the loop and then execute the command
+        (let ((input nil))
+          (loop for line across *buffer*
+             counting line into row
+             do
+             ;; display lines
+               (cond
+                 ((string= "1" type)
+                  (formatted-output line))
+                 ((string= "0" type)
+                  (format t "~a~%" line)))
+
+             ;; split and ask to scroll or to type a command
+               (when (= row rows)
+                 (setf row 0)
+                 (format t "~a   press enter or a shell command ~a : "
+                         (get-color 'cyan)
+                         (get-color  'white))
+                 (force-output)
+                 (let ((first-input (read-char)))
+                   (when (not (char= #\NewLine first-input))
+                     (unread-char first-input)
+                     (let ((input-text (format nil "~a" (read-line nil nil))))
+                       (setf input input-text)
+                       (loop-finish))))))
+
+          ;; in case of shell command, do it
+          (if input
+              (user-input input)
+              (when (< (length *buffer*) rows)
+                (dotimes (i (- rows (length *buffer*)))
+                  (format t "~%"))))))
+
+      ;; not interactive
+      ;; display and quit
       (loop for line across *buffer*
-	 counting line into row
-	 do
-	   ;; display lines
-	   (cond
-	     ((string= "1" type)
-	      (formatted-output line))
-	     ((string= "0" type)
-	      (format t "~a~%" line)))
-
-	   ;; split and ask to scroll or to type a command
-	   (when (= row rows)
-	     (setf row 0)
-	     (format t "~a   press enter or a shell command ~a : "
-		     (get-color 'cyan)
-		     (get-color  'white))
-	     (force-output)
-	     (let ((first-input (read-char)))
-	       (when (not (char= #\NewLine first-input))
-		 (unread-char first-input)
-		 (let ((input-text (format nil "~a" (read-line nil nil))))
-		   (setf input input-text)
-		   (loop-finish))))))
-
-      ;; in case of shell command, do it
-      (if input
-          (user-input input)
-          (when (< (length *buffer*) rows)
-            (dotimes (i (- rows (length *buffer*)))
-              (format t "~%")))))))
+         do
+           (format t "~a~%" line))))
 
 (defun visit(destination)
   "visit a location"
@@ -471,12 +499,14 @@
 	       ;; url as argument
 	       (parse-url argv)
 	       ;; default url
-	       (make-location :host "bitreich.org" :port 70 :uri "/" :type "1")))))
+	       (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
 
     ;; if user want to drop from first page we need
     ;; to look it here
     (when (not (eq 'end (visit destination)))
-      (when (string= "1" (location-type destination))
+      ;; we continue to the shell if the type was 1 and we are in a terminal
+      (when (and (ttyp)
+                 (string= "1" (location-type destination)))
 	(shell)))))
 
 ;; we allow ecl to use a new kind of argument
