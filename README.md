@@ -57,6 +57,16 @@ links. You can exit shell mode with **x**.
 - x : quit shell mode
 - q : quit shell mode
 
+In addition to the previous keybinding, a different layout coexist,
+using the numpad to use clic with only one hand :
+
+- "a number" : follow the link "number
+- / : previous page
+- * : reload the page
+- - : display bookmarks
+- + : add to bookmark
+- . : quit
+
 ## Non shell-mode ##
 
 ### Fetch a page
