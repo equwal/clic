@@ -1,4 +1,4 @@
-;;;; let's hide the loading
+;;; let's hide the loading
 (let ((*standard-output* (make-broadcast-stream)))
   (require 'asdf)
   #+sbcl
@@ -18,7 +18,6 @@
   (defun c-termsize ()
     "return terminal height"
     (sb-alien:with-alien ((res unsigned-int (getTerminalHeight))))))
-
 
 #+ecl
 (progn
@@ -105,6 +104,16 @@
   (if (= 1 (c-ttyp))
       t
       nil))
+
+(defun copy-array(from)
+  (let ((dest (make-array 200
+                          :fill-pointer 0
+                          :initial-element nil
+                          :adjustable t)))
+    (loop for element across from
+       do
+         (vector-push element dest))
+    dest))
 
 (defun print-with-color(text &optional (color 'reset) (line-number nil))
   "Used to display a line with a color"
@@ -194,7 +203,7 @@
 
               ;; 9 Binary
               (check "9"
-                     (print-with-color "selector 9 not implemented" 'red))
+                     (print-with-color text 'red line-number))
 
               ;; + redundant server
               (check "+"
@@ -210,7 +219,9 @@
 
               ;; I image
               (check "I"
-                     (print-with-color "selector I not implemented" 'red))
+                     (setf (gethash line-number *links*)
+                           (make-location :host host :port port :uri uri :type line-type ))
+                     (print-with-color text 'red line-number))
 
               ;; h http link
               (check "h"
@@ -222,7 +233,7 @@
                                       "invalid type ~a : ~a" line-type text)
                               'red))))))
 
-(defun getpage(host port uri)
+(defun getpage(host port uri &optional (binary nil))
   "connect and display"
 
   ;; we reset the buffer
@@ -240,27 +251,41 @@
     (sb-bsd-sockets:socket-connect socket host port)
 
     ;; we open a stream for input/output
-    (let ((stream (sb-bsd-sockets:socket-make-stream socket :input t :output t)))
+    (let ((stream (sb-bsd-sockets:socket-make-stream socket
+                                                     :input t
+                                                     :output t
+                                                     :element-type :default)))
 
-      ;; sending the request here
-      ;; if the selector is 1 we omit it
+      ;; sending the request to the server
       (format stream "~a~%" uri)
       (force-output stream)
 
-      ;; save current buffer to display it back if needed
-      (setf *previous-buffer* *buffer*)
-
-      ;; for each line we receive we display it
-      (loop for line = (read-line stream nil nil)
-         while line
-         do
-           (vector-push line *buffer*)))))
+      (if binary
+          ;; binary
+          ;; save into a file in $PWD
+          (with-open-file (output (subseq uri (1+ (position #\/ uri :from-end t)))
+                                  :element-type '(unsigned-byte 8)
+                                  :direction :output :if-exists :supersede)
+            (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
+              (loop for pos = (read-sequence buf stream)
+                 while (plusp pos)
+                 do
+                   (write-sequence buf output :end pos))))
+            
+          ;; not binary
+          ;; for each line we receive we store it in *buffer*
+          (loop for line = (read-line stream nil nil)
+             while line
+             do
+               (vector-push line *buffer*))))))
 
 (defun g(key)
   "browse to the N-th link"
   (let ((destination (gethash key *links*)))
     (when destination
+
       (cond
+
         ;; visit a gopher link (type 0 or 1)
         ((location-p destination)
          (visit destination))
@@ -430,7 +455,6 @@
         ;;;; output is a text file ?
         ;;;; call the $PAGER !
         ((string= "0" type)
-         (pop *history*) ;; it's not a menu, we need to remove it from history
          ;;; generate a string from *buffer* array
          (let ((text (string-right-trim ; remove last newline
                       (string #\Newline)
@@ -439,15 +463,29 @@
                                  collect line)))))
            ;; create input stream used as stdin for $PAGER
            (let ((input (make-string-input-stream text)))
-             (uiop:run-program (list #+ecl
-                                     (si:getenv "PAGER")
-                                     #+sbcl
-                                     (sb-unix::posix-getenv "PAGER"))
+             (uiop:run-program (list (uiop:getenv "PAGER"))
                                :input input
                                :output :interactive))
            ;; display last menu
-           (setf *buffer* *previous-buffer*)
+           (pop *history*)
+           (setf *buffer* (copy-array *previous-buffer*))
+           (setf *links* (make-hash-table))
            (display-buffer "1")))
+
+        ;; image
+        ((string= "I" type)
+         (let ((location (car *history*)))
+           (uiop:run-program (list "xdg-open"
+                                   (subseq ;; get the text after last /
+                                    (location-uri location)
+                                    (1+ (position #\/
+                                                  (location-uri location)
+                                                  :from-end t))))))
+         (pop *history*)
+         (setf *buffer* (copy-array *previous-buffer*))
+         (setf *links* (make-hash-table))
+         (display-buffer "1"))
+
 
         ;;;; output is a menu ?
         ;;;; display the menu and split it in pages if needed
@@ -494,17 +532,34 @@
 (defun visit(destination)
   "visit a location"
 
-  (getpage (location-host destination)
-           (location-port destination)
-           (location-uri  destination))
+  (cond
+
+    ;; we retrieve text / lines
+    ;; when type is 1 or 0
+    ((or
+      (string= "1" (location-type destination))
+      (string= "0" (location-type destination)))
+  
+     (getpage (location-host destination)
+              (location-port destination)
+              (location-uri  destination)))
+
+    (t
+     (getpage (location-host destination)
+              (location-port destination)
+              (location-uri  destination)
+              t)))
+
 
   ;; we reset the links table ONLY if we have a new folder
+  ;; we also keep the last menu buffer
   (when (string= "1" (location-type destination))
+    (setf *previous-buffer* (copy-array *buffer*))
     (setf *links* (make-hash-table)))
-
+  
   ;; goes to the history !
   (push destination *history*)
-
+  
   (when *offline*
     (let ((path (concatenate 'string
                              "history/" (location-host destination)
