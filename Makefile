@@ -3,7 +3,7 @@
 .POSIX:
 
 BIN    = clic
-LISP   = sbcl
+LISP   = ecl
 PREFIX = /usr
 BINDIR = ${PREFIX}/bin
 MANDIR = ${PREFIX}/share/man/man1
