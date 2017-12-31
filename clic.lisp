@@ -211,6 +211,8 @@
 
               ;; 9 Binary
               (check "9"
+                     (setf (gethash line-number *links*)
+                           (make-location :host host :port port :uri uri :type line-type ))
                      (print-with-color text 'red line-number))
 
               ;; + redundant server
@@ -481,16 +483,18 @@
            (display-buffer "1")))
 
         ;; image
-        ((string= "I" type)
+        ((or
+          (string= "I" type)
+          (string= "9" type))
          (let ((location (car *history*)))
            (uiop:run-program (list "xdg-open"
-                                   (print (concatenate 'string
+                                   (concatenate 'string
                                                 "/tmp/"
                                                 (subseq ;; get the text after last /
                                                  (location-uri location)
                                                  (1+ (position #\/
                                                                (location-uri location)
-                                                               :from-end t))))))))
+                                                               :from-end t)))))))
          (pop *history*)
          (setf *buffer* (copy-array *previous-buffer*))
          (setf *links* (make-hash-table))
