@@ -98,20 +98,16 @@
 ;;;; END ANSI colors
 
 ;;;; is the output interactive or a pipe ?
-
 (defun ttyp()
   "return t if the output is a terminal"
   ;; we use this variable in case we don't want to be interactive
   ;; like when we use a cmd arg to get an image
-  (if *not-interactive*
-      nil
-      (progn
-        #+sbcl
-        (interactive-stream-p *standard-output*)
-        #+ecl
-        (if (= 1 (c-ttyp))
-            t
-            nil))))
+  #+sbcl
+  (interactive-stream-p *standard-output*)
+  #+ecl
+  (if (= 1 (c-ttyp))
+      t
+      nil))
 
 (defun copy-array(from)
   "return a new array containing the same elements as the parameter"
@@ -630,9 +626,7 @@
     ;; if we don't ask a menu, not going interactive
     (if (not (string= "1" (location-type destination)))
         ;; not interactive
-        (progn
-          (setf *not-interactive* t)
-          (visit destination))
+        (visit destination)
 
         ;; if user want to drop from first page we need
         ;; to look it here
