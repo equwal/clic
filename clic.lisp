@@ -6,7 +6,6 @@
   #+ecl
   (require 'sockets))
 
-
 ;;;; C binding to get terminal informations
 ;;;; SBCL only
 #+sbcl
@@ -48,6 +47,9 @@
 (defparameter *buffer* nil)
 ;;; array of lines of last menu
 (defparameter *previous-buffer* nil)
+
+;;; boolean if we are interactive or not
+(defparameter *not-interactive* nil)
 
 ;;; a list containing the last viewed pages
 (defparameter *history*   '())
@@ -98,14 +100,21 @@
 ;;;; is the output interactive or a pipe ?
 
 (defun ttyp()
-  #+sbcl
-  (interactive-stream-p *standard-output*)
-  #+ecl
-  (if (= 1 (c-ttyp))
-      t
-      nil))
+  "return t if the output is a terminal"
+  ;; we use this variable in case we don't want to be interactive
+  ;; like when we use a cmd arg to get an image
+  (if *not-interactive*
+      nil
+      (progn
+        #+sbcl
+        (interactive-stream-p *standard-output*)
+        #+ecl
+        (if (= 1 (c-ttyp))
+            t
+            nil))))
 
 (defun copy-array(from)
+  "return a new array containing the same elements as the parameter"
   (let ((dest (make-array 200
                           :fill-pointer 0
                           :initial-element nil
@@ -141,16 +150,15 @@
 (defun formatted-output(line)
   "Used to display gopher response with color one line at a time"
   (let ((line-type (subseq line 0 1))
-        (infos (split (subseq line 1) #\Tab)))
+        (field     (split (subseq line 1) #\Tab)))
 
     ;; if split worked
-    (when (= (length infos) 4)
-
+    (when (= (length field) 4)
       (let ((line-number (+ 1 (hash-table-count *links*)))
-            (text (car infos))
-            (uri  (cadr infos))
-            (host (caddr infos))
-            (port (parse-integer (cadddr infos))))
+            (text (car field))
+            (uri  (cadr field))
+            (host (caddr field))
+            (port (parse-integer (cadddr field))))
 
         ;; see RFC 1436
         ;; section 3.8
@@ -215,7 +223,9 @@
 
               ;; g GIF file
               (check "g"
-                     (print-with-color "selector g not implemented" 'red))
+                     (setf (gethash line-number *links*)
+                           (make-location :host host :port port :uri uri :type line-type))
+                     (print-with-color text 'red line-number))
 
               ;; I image
               (check "I"
@@ -226,7 +236,7 @@
               ;; h http link
               (check "h"
                      (setf (gethash line-number *links*) uri)
-                     (print-with-color text 'http line-number)))
+                     (print-with-color text 'http line-number))) ;;;; end of known types
 
             ;; unknown type
             (print-with-color (format nil
@@ -234,7 +244,7 @@
                               'red))))))
 
 (defun getpage(host port uri &optional (binary nil))
-  "connect and display"
+  "send a request and store the answer (in *buffer* if text or save a file if binary)"
 
   ;; we reset the buffer
   (setf *buffer*
@@ -255,23 +265,33 @@
                                                      :input t
                                                      :output t
                                                      :element-type :default)))
-
       ;; sending the request to the server
       (format stream "~a~%" uri)
       (force-output stream)
 
       (if binary
           ;; binary
-          ;; save into a file in $PWD
-          (with-open-file (output (subseq uri (1+ (position #\/ uri :from-end t)))
-                                  :element-type '(unsigned-byte 8)
-                                  :direction :output :if-exists :supersede)
-            (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
-              (loop for pos = (read-sequence buf stream)
-                 while (plusp pos)
-                 do
-                   (write-sequence buf output :end pos))))
-            
+
+          ;; in terminal = save the file
+          ;; not terminal = write to stdio
+          (if (ttyp)
+              ;; save into a file in /tmp
+              (let ((filename (subseq uri (1+ (position #\/ uri :from-end t)))))
+                (with-open-file (output (concatenate 'string "/tmp/" filename)
+                                        :element-type '(unsigned-byte 8)
+                                        :direction :output :if-exists :supersede)
+                  (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
+                    (loop for pos = (read-sequence buf stream)
+                       while (plusp pos)
+                       do
+                         (write-sequence buf output :end pos)))))
+
+              ;; write to the standard output
+              (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
+                (loop for pos = (read-sequence buf stream)
+                   while (plusp pos)
+                   do
+                     (write-sequence buf *standard-output* :end pos))))
           ;; not binary
           ;; for each line we receive we store it in *buffer*
           (loop for line = (read-line stream nil nil)
@@ -283,13 +303,10 @@
   "browse to the N-th link"
   (let ((destination (gethash key *links*)))
     (when destination
-
       (cond
-
-        ;; visit a gopher link (type 0 or 1)
+        ;; visit a gopher link
         ((location-p destination)
          (visit destination))
-
         ;; visit http link
         ((search "URL:" destination)
          (uiop:run-program (list "xdg-open"
@@ -305,7 +322,6 @@
   "browse to the previous link"
   (when (<= 1 (length *history*))
     (visit (pop *history*))))
-
 
 (defun load-bookmark()
   "Restore the bookmark from file"
@@ -344,6 +360,7 @@
                                         (location-type bookmark)
                                         (location-uri bookmark))
                            'file line-number))))
+
 (defun help-shell()
   "show help for the shell"
   (format t "number      : go to link n~%")
@@ -357,36 +374,27 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-  (let ((url (if (and
-                  ;; if it contains more chars than gopher://
-                  (<= (length "gopher://") (length url))
-                  ;; if it starts with gopher// with return without it
-                  (string= "gopher://" (subseq url 0 9)))
-                 ;; we keep the url as is
-                 (subseq url 9)
-                 url)))
+  (let ((url (string-left-trim "gopher://" url)))
 
-    ;; splitting by / to get host:port and uri
-    (let ((infos (split url #\/)))
+    ;; splitting with / to get host:port and uri
+    ;; splitting host and port to get them
+    (let* ((infos      (split url #\/))
+           (host-port (split (pop infos) #\:)))
 
-      ;; splitting host and port to get them
-      (let ((host-port (split (pop infos) #\:)))
+      ;; create the location to visit
+      (make-location  :host (pop host-port)
 
-        ;; create the location to visit
-        (make-location  :host (pop host-port)
+                      ;; default to port 70 if not supplied
+                      :port (if host-port ;; <- empty if no port given
+                                (parse-integer (car host-port))
+                                70)
 
-                        ;; default to port 70 if not supplied
-                        :port (if host-port
-                                  (parse-integer (car host-port))
-                                  70)
+                      ;; if type is empty we default to "1"
+                      :type (let ((type (pop infos)))
+                              (if (< 0 (length type)) type "1"))
 
-                        ;; if type is empty we use "1"
-                        :type (let ((type (pop infos)))
-                                (if (< 0 (length type)) type "1"))
-
-                        ;; glue remaining args between them
-                        :uri (format nil "~{/~a~}" infos))))))
-
+                      ;; glue remaining args between them
+                      :uri (format nil "~{/~a~}" infos)))))
 
 (defun get-argv()
   "Parse argv and return it"
@@ -476,11 +484,13 @@
         ((string= "I" type)
          (let ((location (car *history*)))
            (uiop:run-program (list "xdg-open"
-                                   (subseq ;; get the text after last /
-                                    (location-uri location)
-                                    (1+ (position #\/
-                                                  (location-uri location)
-                                                  :from-end t))))))
+                                   (print (concatenate 'string
+                                                "/tmp/"
+                                                (subseq ;; get the text after last /
+                                                 (location-uri location)
+                                                 (1+ (position #\/
+                                                               (location-uri location)
+                                                               :from-end t))))))))
          (pop *history*)
          (setf *buffer* (copy-array *previous-buffer*))
          (setf *links* (make-hash-table))
@@ -523,7 +533,6 @@
                    (dotimes (i (- rows (length *buffer*)))
                      (format t "~%"))))))))
 
-      ;; not interactive
       ;; display and quit
       (loop for line across *buffer*
          do
@@ -582,7 +591,7 @@
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
-    (format t "gopher://~a:~a/~a~a : "
+    (format t "gopher://~a:~a/~a~a / (P)rev (R)eload (B)ookmark (H)istory : "
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
@@ -614,13 +623,19 @@
                ;; default url
                (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
 
-    ;; if user want to drop from first page we need
-    ;; to look it here
-    (when (not (eq 'end (visit destination)))
-      ;; we continue to the shell if the type was 1 and we are in a terminal
-      (when (and (ttyp)
-                 (string= "1" (location-type destination)))
-        (shell)))))
+    ;; if we don't ask a menu, not going interactive
+    (if (not (string= "1" (location-type destination)))
+        ;; not interactive
+        (progn
+          (setf *not-interactive* t)
+          (visit destination))
+
+        ;; if user want to drop from first page we need
+        ;; to look it here
+        (when (not (eq 'end (visit destination)))
+          ;; we continue to the shell if we are in a terminal
+          (when (ttyp)
+            (shell))))))
 
 ;; we allow ecl to use a new kind of argument
 ;; not sure how it works but that works
