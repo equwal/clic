@@ -6,15 +6,15 @@ client is keyboard only...
 
 It currently works with **ecl** and **sbcl** compilers. 
 
-Clic must be compiled to be used :
-
-To compile it with **sbcl** :
-
-    make LISP=sbcl
+`clic` binary must be compiled.
 
 To compile it with **ecl** :
 
     make
+
+To compile it with **sbcl** :
+
+    make LISP=sbcl
 
 then you can use `make install` to deploy it in `/usr/bin/`.
 
@@ -72,3 +72,6 @@ permitting to use clic with the numpad with only one hand :
 
 If you call clic with an argument which is a request for a binary
 type, clic will output the data to stdout.
+
+Using "gopher://" at the start of an url isn't mandatory.
+
