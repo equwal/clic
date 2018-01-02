@@ -274,15 +274,19 @@
           ;; not terminal = write to stdio
           (if (ttyp)
               ;; save into a file in /tmp
-              (let ((filename (subseq uri (1+ (position #\/ uri :from-end t)))))
-                (with-open-file (output (concatenate 'string "/tmp/" filename)
+              (let* ((filename (subseq uri (1+ (position #\/ uri :from-end t))))
+                     (path (concatenate 'string "/tmp/" filename)))
+                (with-open-file (output path
                                         :element-type '(unsigned-byte 8)
                                         :direction :output :if-exists :supersede)
                   (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
                     (loop for pos = (read-sequence buf stream)
                        while (plusp pos)
                        do
-                         (write-sequence buf output :end pos)))))
+                         (format t ".")
+                         (force-output)
+                         (write-sequence buf output :end pos)))
+                  (format t "~%File downloaded into ~a (~a bytes)~%" path (file-length output))))
 
               ;; write to the standard output
               (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
@@ -474,9 +478,10 @@
                                :output :interactive))
            ;; display last menu
            (pop *history*)
-           (setf *buffer* (copy-array *previous-buffer*))
-           (setf *links* (make-hash-table))
-           (display-buffer "1")))
+           (when *previous-buffer*
+             (setf *buffer* (copy-array *previous-buffer*))
+             (setf *links* (make-hash-table))
+             (display-buffer "1"))))
 
         ;; image
         ((or
@@ -492,9 +497,10 @@
                                                                (location-uri location)
                                                                :from-end t)))))))
          (pop *history*)
-         (setf *buffer* (copy-array *previous-buffer*))
-         (setf *links* (make-hash-table))
-         (display-buffer "1"))
+         (when *previous-buffer*
+           (setf *buffer* (copy-array *previous-buffer*))
+           (setf *links* (make-hash-table))
+           (display-buffer "1")))
 
 
         ;;;; output is a menu ?
