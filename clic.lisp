@@ -270,7 +270,7 @@
           (progn
             (format t "Input : ")
             (let ((user-input (read-line nil nil)))
-              (format stream "~a?~a~%" uri user-input)))
+              (format stream "~a	~a~%" uri user-input)))
           (format stream "~a~%" uri))
       (force-output stream)
 
