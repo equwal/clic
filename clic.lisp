@@ -376,7 +376,9 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-  (let ((url (string-left-trim "gopher://" url)))
+  (let ((url (if (= 0 (search "gopher://" url))
+                 (subseq url 9)
+                 url)))
 
     ;; splitting with / to get host:port and uri
     ;; splitting host and port to get them
