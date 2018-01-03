@@ -199,7 +199,9 @@
 
               ;; 7 Index search server
               (check "7"
-                     (print-with-color "selector 7 not implemented" 'red))
+                     (setf (gethash line-number *links*)
+                           (make-location :host host :port port :uri uri :type line-type ))
+                     (print-with-color text 'red line-number))
 
               ;; 8 Telnet session
               (check "8"
@@ -241,7 +243,7 @@
                                       "invalid type ~a : ~a" line-type text)
                               'red))))))
 
-(defun getpage(host port uri &optional (binary nil))
+(defun getpage(host port uri &optional (binary nil) (search nil))
   "send a request and store the answer (in *buffer* if text or save a file if binary)"
 
   ;; we reset the buffer
@@ -264,7 +266,12 @@
                                                      :output t
                                                      :element-type :default)))
       ;; sending the request to the server
-      (format stream "~a~%" uri)
+      (if search
+          (progn
+            (format t "Input : ")
+            (let ((user-input (read-line nil nil)))
+              (format stream "~a?~a~%" uri user-input)))
+          (format stream "~a~%" uri))
       (force-output stream)
 
       (if binary
@@ -438,6 +445,12 @@
       (string= "p" input))
      (p))
 
+    ;; dump raw informations
+    ((string= "d" input)
+     (loop for c across *buffer*
+        do
+          (format t "~a~%" c)))
+
     ;; exit
     ((or
       (string= "." input)
@@ -507,7 +520,9 @@
 
         ;;;; output is a menu ?
         ;;;; display the menu and split it in pages if needed
-        ((string= "1" type)
+        ((or
+          (string= "1" type)
+          (string= "7" type))
 
          ;; we store the user input outside of the loop
          ;; so if the user doesn't want to scroll
@@ -560,6 +575,12 @@
      (getpage (location-host destination)
               (location-port destination)
               (location-uri  destination)))
+
+    ((string= "7" (location-type destination))
+     (getpage (location-host destination)
+              (location-port destination)
+              (location-uri  destination)
+              nil t))
 
     (t
      (getpage (location-host destination)
