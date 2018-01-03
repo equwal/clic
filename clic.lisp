@@ -376,7 +376,7 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-  (let ((url (if (= 0 (search "gopher://" url))
+  (let ((url (if (search "gopher://" url)
                  (subseq url 9)
                  url)))
 
