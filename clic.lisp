@@ -479,24 +479,29 @@
       (cond
         ;;;; output is a text file ?
         ;;;; call the $PAGER !
-        ((string= "0" type)
-         ;;; generate a string from *buffer* array
-         (let ((text (string-right-trim ; remove last newline
-                      (string #\Newline)
-                      (format nil "~{~a~%~}" ; concatenate lines
-                              (loop for line across *buffer*
-                                 collect line)))))
-           ;; create input stream used as stdin for $PAGER
-           (let ((input (make-string-input-stream text)))
-             (uiop:run-program (list (uiop:getenv "PAGER"))
-                               :input input
-                               :output :interactive))
-           ;; display last menu
-           (pop *history*)
-           (when *previous-buffer*
-             (setf *buffer* (copy-array *previous-buffer*))
-             (setf *links* (make-hash-table))
-             (display-buffer "1"))))
+       ((string= "0" type)
+	         ;;; generate a string from *buffer* array
+	(let* ((uri (location-uri (car *history*)))
+	       (filename (subseq uri (1+ (position #\/ uri :from-end t))))
+		(path (concatenate 'string "/tmp/" filename)))
+	   (print filename)
+	   (print path)
+	   (with-open-file (output path
+				   :direction :output
+				   :if-does-not-exist :create
+				   :if-exists :supersede)
+			   (loop for line across *buffer*
+				 do
+				 (format output "~a~%" line)))
+	   (uiop:run-program (list (or (uiop:getenv "EDITOR") "less") path)
+			     :input :interactive
+			     :output :interactive))
+	 ;; display last menu
+	 (pop *history*)
+	 (when *previous-buffer*
+	   (setf *buffer* (copy-array *previous-buffer*))
+	   (setf *links* (make-hash-table))
+	   (display-buffer "1")))
 
         ;; image
         ((or
