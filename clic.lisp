@@ -543,11 +543,13 @@
                             (get-color 'reset))
                     (force-output)
                     (let ((first-input (read-char)))
-                      (when (not (char= #\NewLine first-input))
-                        (unread-char first-input)
-                        (let ((input-text (format nil "~a" (read-line nil nil))))
-                          (setf input input-text)
-                          (loop-finish))))))
+                      (if (char= #\NewLine first-input)
+			  (format t "'~a[A~a[K" #\Escape #\Escape)
+			(progn
+			  (unread-char first-input)
+			  (let ((input-text (format nil "~a" (read-line nil nil))))
+			    (setf input input-text)
+			    (loop-finish)))))))
 
              ;; in case of shell command, do it
              (if input
