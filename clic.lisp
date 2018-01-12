@@ -493,7 +493,7 @@
 			   (loop for line across *buffer*
 				 do
 				 (format output "~a~%" line)))
-	   (uiop:run-program (list (or (uiop:getenv "EDITOR") "less") path)
+	   (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
 			     :input :interactive
 			     :output :interactive))
 	 ;; display last menu
@@ -549,7 +549,7 @@
                     (force-output)
                     (let ((first-input (read-char)))
                       (if (char= #\NewLine first-input)
-			  (format t "'~a[A~a[K" #\Escape #\Escape)
+			  (format t "'~C[A~C[K~C" #\Escape #\Escape #\return)
 			(progn
 			  (unread-char first-input)
 			  (let ((input-text (format nil "~a" (read-line nil nil))))
