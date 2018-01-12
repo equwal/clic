@@ -75,6 +75,7 @@ Keyboard bindings
 + r : reload the page
 + x : quit shell mode
 + q : quit shell mode
++ d : display the raw response
 
 In addition to the previous keybinding, a different layout coexists,
 permitting to use clic with the numpad with only one hand :

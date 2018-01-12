@@ -376,6 +376,7 @@
   (format t "a or +      : add a bookmark~%")
   (format t "r or *      : reload the page~%")
   (format t "help        : show this help~%")
+  (format t "d           : dump the raw reponse~%")
   (format t "x or q or . : exit the shell, go back to REPL~%"))
 
 (defun parse-url(url)
