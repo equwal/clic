@@ -71,9 +71,6 @@
         "h" "7" "8" "9" "+" "T" "g" "I"))
 
 ;;;; BEGIN CUSTOMIZABLE
-;;; keep files visited on disk when t
-(defparameter *offline* nil)
-
 ;;; name/location of the bookmark file
 (defparameter *bookmark-file* "bookmark.lisp")
 ;;;; END CUSTOMIZABLE
@@ -484,8 +481,6 @@
 	(let* ((uri (location-uri (car *history*)))
 	       (filename (subseq uri (1+ (position #\/ uri :from-end t))))
 		(path (concatenate 'string "/tmp/" filename)))
-	   (print filename)
-	   (print path)
 	   (with-open-file (output path
 				   :direction :output
 				   :if-does-not-exist :create
@@ -605,24 +600,6 @@
   ;; goes to the history !
   (push destination *history*)
   
-  (when *offline*
-    (let ((path (concatenate 'string
-                             "history/" (location-host destination)
-                             "/" (location-uri destination) "/")))
-      (ensure-directories-exist path)
-
-      (with-open-file
-          (save-offline (concatenate
-                         'string  path (location-type destination))
-                        :direction :output
-                        :if-does-not-exist :create
-                        :if-exists :supersede)
-
-        (loop for line across *buffer*
-           while line
-           do
-             (format save-offline "~a~%" line)))))
-
   (display-buffer (location-type destination)))
 
 (defun display-prompt()
