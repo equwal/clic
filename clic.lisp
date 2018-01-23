@@ -267,8 +267,8 @@
           (progn
             (format t "Input : ")
             (let ((user-input (read-line nil nil)))
-              (format stream "~a	~a~%" uri user-input)))
-          (format stream "~a~%" uri))
+              (format stream "~a	~a~a~a" uri user-input #\Return #\Newline)))
+          (format stream "~a~a~a" uri #\Return #\Newline))
       (force-output stream)
 
       (if binary
@@ -575,6 +575,7 @@
                     (force-output)
                     (let ((first-input (read-char)))
                       (if (char= #\NewLine first-input)
+                          ;; we hide previous line (prompt)
 			  (format t "'~C[A~C[K~C" #\Escape #\Escape #\return)
 			(progn
 			  (unread-char first-input)
