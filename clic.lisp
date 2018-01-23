@@ -318,6 +318,23 @@
          (uiop:run-program (list "xdg-open"
                                  (subseq destination 4))))))))
 
+(defun filter-line(text)
+  "display only lines containg text"
+  (setf *previous-buffer* (copy-array *buffer*))
+  (setf *buffer* (make-array 200
+                             :fill-pointer 0
+                             :initial-element nil
+                             :adjustable t))
+  ;; we create a new buffer from the current
+  ;; with only lines matching the string (no regex)
+  (loop for line across *previous-buffer*
+     do
+       (when (search text line :test #'char-equal)
+         (vector-push line *buffer*)))
+
+  (display-buffer "1"))
+
+
 (defun p()
   "browse to the previous link"
   (when (<= 2 (length *history*))
@@ -377,6 +394,7 @@
   (format t "r or *      : reload the page~%")
   (format t "help        : show this help~%")
   (format t "d           : dump the raw reponse~%")
+  (format t "/ text      : display online lines matching text~%")
   (format t "x or q or . : exit the shell, go back to REPL~%"))
 
 (defun parse-url(url)
@@ -443,6 +461,11 @@
       (string= "p" input))
      (p))
 
+    ;; search a pattern in a menu
+    ;; search should return 0 if we use it
+    ((= 0 (or (search "/ " input) 1))
+     (filter-line (subseq input 2)))
+
     ;; dump raw informations
     ((string= "d" input)
      (loop for c across *buffer*
@@ -481,17 +504,17 @@
 	         ;;; generate a string from *buffer* array
 	(let* ((uri (location-uri (car *history*)))
 	       (filename (subseq uri (1+ (position #\/ uri :from-end t))))
-		(path (concatenate 'string "/tmp/" filename)))
-	   (with-open-file (output path
-				   :direction :output
-				   :if-does-not-exist :create
-				   :if-exists :supersede)
-			   (loop for line across *buffer*
-				 do
-				 (format output "~a~%" line)))
-	   (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
-			     :input :interactive
-			     :output :interactive))
+               (path (concatenate 'string "/tmp/" filename)))
+          (with-open-file (output path
+                                  :direction :output
+                                  :if-does-not-exist :create
+                                  :if-exists :supersede)
+            (loop for line across *buffer*
+               do
+                 (format output "~a~%" line)))
+          (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
+                            :input :interactive
+                            :output :interactive))
 	 ;; display last menu
 	 (pop *history*)
 	 (when *previous-buffer*

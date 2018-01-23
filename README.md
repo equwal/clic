@@ -75,6 +75,7 @@ Keyboard bindings
 + r : reload the page
 + x : quit shell mode
 + q : quit shell mode
++ / pattern : redisplay the menu only with lines containing pattern (no regex)
 + d : display the raw response
 
 In addition to the previous keybinding, a different layout coexists,
