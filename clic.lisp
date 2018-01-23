@@ -329,7 +329,7 @@
   ;; with only lines matching the string (no regex)
   (loop for line across *previous-buffer*
      do
-       (when (search text line :test #'char-equal)
+       (when (search text (car (split (subseq line 1) #\Tab)) :test #'char-equal)
          (vector-push line *buffer*)))
 
   (display-buffer "1"))
@@ -462,7 +462,14 @@
      (p))
 
     ;; search a pattern in a menu
-    ;; search should return 0 if we use it
+    ;; syntax /pattern
+    ((and
+      (search "/" input)
+      (> (length input) 1))
+     (filter-line (subseq input 1)))
+
+    ;; same as previously
+    ;; but with syntax / pattern
     ((= 0 (or (search "/ " input) 1))
      (filter-line (subseq input 2)))
 
