@@ -386,16 +386,16 @@
 
 (defun help-shell()
   "show help for the shell"
-  (format t "number      : go to link n~%")
-  (format t "p or /      : go to previous page~%")
-  (format t "h           : display history~%")
-  (format t "b or -      : display bookmarks and choose a link from it~%")
-  (format t "a or +      : add a bookmark~%")
-  (format t "r or *      : reload the page~%")
-  (format t "help        : show this help~%")
-  (format t "d           : dump the raw reponse~%")
-  (format t "/ text      : display online lines matching text~%")
-  (format t "x or q or . : exit the shell, go back to REPL~%"))
+  (format t "number            : go to link n~%")
+  (format t "p or /            : go to previous page~%")
+  (format t "h                 : display history~%")
+  (format t "b or -            : display bookmarks and choose a link from it~%")
+  (format t "a or +            : add a bookmark~%")
+  (format t "r or *            : reload the page~%")
+  (format t "help              : show this help~%")
+  (format t "d                 : dump the raw reponse~%")
+  (format t "/ text            : display online lines matching text~%")
+  (format t "^D or x or q or . : quit clic~%"))
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
@@ -481,6 +481,7 @@
 
     ;; exit
     ((or
+      (eql nil input)
       (string= "." input)
       (string= "exit" input)
       (string= "x" input)
@@ -573,15 +574,20 @@
                             (get-color 'bg-black)
                             (get-color 'reset))
                     (force-output)
-                    (let ((first-input (read-char)))
-                      (if (char= #\NewLine first-input)
-                          ;; we hide previous line (prompt)
-			  (format t "'~C[A~C[K~C" #\Escape #\Escape #\return)
-			(progn
-			  (unread-char first-input)
-			  (let ((input-text (format nil "~a" (read-line nil nil))))
-			    (setf input input-text)
-			    (loop-finish)))))))
+                    (let ((first-input (read-char *standard-input* nil nil t)))
+                      (cond
+		       ((not first-input)
+			(format t "~%") ;; display a newline
+			(setf input "x") ;; we exit
+			(loop-finish))
+		       ((char= #\NewLine first-input)
+			;; we hide previous line (prompt)
+			(format t "'~C[A~C[K~C" #\Escape #\Escape #\return))
+		       (t
+			(unread-char first-input)
+			(let ((input-text (format nil "~a" (read-line nil nil))))
+			  (setf input input-text)
+			  (loop-finish)))))))
 
              ;; in case of shell command, do it
              (if input
@@ -649,14 +655,15 @@
 
   ;; we loop until X or Q is typed
   (loop for input = (format nil "~a" (read-line nil nil))
-     while (not (or
-                 (string= "exit" input)
-                 (string= "x" input)
-                 (string= "q" input)))
-     do
-       (when (eq 'end (user-input input))
-         (loop-finish))
-       (display-prompt)))
+	while (not (or
+		    (string= "NIL" input) ;; ^D
+		    (string= "exit" input)
+		    (string= "x" input)
+		    (string= "q" input)))
+	do
+	(when (eq 'end (user-input input))
+	  (loop-finish))
+	(display-prompt)))
 
 (defun main()
   "fetch argument, display page and go to shell if type is 1"
@@ -675,10 +682,10 @@
 
         ;; if user want to drop from first page we need
         ;; to look it here
-        (when (not (eq 'end (visit destination)))
-          ;; we continue to the shell if we are in a terminal
-          (when (ttyp)
-            (shell))))))
+      (when (not (eq 'end (visit destination)))
+	;; we continue to the shell if we are in a terminal
+	(when (ttyp)
+	  (shell))))))
 
 ;; we allow ecl to use a new kind of argument
 ;; not sure how it works but that works

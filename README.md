@@ -73,8 +73,7 @@ Keyboard bindings
 + p : previous page
 + h : display history
 + r : reload the page
-+ x : quit shell mode
-+ q : quit shell mode
++ x or q or ^D : quit
 + / pattern : redisplay the menu only with lines containing pattern (no regex)
 + d : display the raw response
 
