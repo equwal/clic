@@ -58,6 +58,9 @@
 ;;; altered by (add-bookmark) and (load-bookmark)
 (defparameter *bookmarks* nil)
 
+;;; contain duration of the last request
+(defparameter *duration* 0)
+
 ;;; when clic loads a type 1 page, we store location structures here
 ;;; when clic display the bookmark, we store bookmarks locations here
 (defparameter *links*     (make-hash-table))
@@ -253,7 +256,8 @@
   ;; we prepare informations about the connection
   (let* ((address (sb-bsd-sockets:get-host-by-name host))
          (host (car (sb-bsd-sockets:host-ent-addresses address)))
-         (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
+         (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
+         (real-time (get-internal-real-time)))
 
     (sb-bsd-sockets:socket-connect socket host port)
 
@@ -303,7 +307,11 @@
           (loop for line = (read-line stream nil nil)
              while line
              do
-               (vector-push line *buffer*))))))
+               (vector-push line *buffer*))))
+
+    ;; we store the duration of the connection
+    (setf *duration* (float (/ (- (get-internal-real-time) real-time)
+                               internal-time-units-per-second)))))
 
 (defun g(key)
   "browse to the N-th link"
@@ -642,11 +650,12 @@
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
-    (format t "gopher://~a:~a/~a~a / (P)rev (R)eload (B)ookmark (H)istory : "
+    (format t "gopher://~a:~a/~a~a (~as) / (P)rev (R)eload (B)ookmark (H)istory : "
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
-            (location-uri last-page)))
+            (location-uri last-page)
+            *duration*))
   (force-output))
 
 (defun shell()
