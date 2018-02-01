@@ -51,15 +51,10 @@
 ;;; a list containing the last viewed pages
 (defparameter *history*   '())
 
-;;; a list containing the bookmarks
-;;; altered by (add-bookmark) and (load-bookmark)
-(defparameter *bookmarks* nil)
-
 ;;; contain duration of the last request
 (defparameter *duration* 0)
 
 ;;; when clic loads a type 1 page, we store location structures here
-;;; when clic display the bookmark, we store bookmarks locations here
 (defparameter *links*     (make-hash-table))
 
 ;;; Colors for use in the code
@@ -69,11 +64,6 @@
 (defparameter *allowed-selectors*
   (list "0" "1" "2" "3" "4" "5" "6" "i"
         "h" "7" "8" "9" "+" "T" "g" "I"))
-
-;;;; BEGIN CUSTOMIZABLE
-;;; name/location of the bookmark file
-(defparameter *bookmark-file* "bookmark.lisp")
-;;;; END CUSTOMIZABLE
 
 ;;;; END GLOBAL VARIABLES
 
@@ -158,103 +148,108 @@
 
 (defun formatted-output(line)
   "Used to display gopher response with color one line at a time"
-  (let ((line-type (subseq line 0 1))
-        (field     (split (subseq line 1) #\Tab)))
+  
+  ;; we check that the line is longer than 1 char and that it has tabs
+  (when (and
+         (< 1 (length line))
+         (position #\Tab line))
+    (let ((line-type (subseq line 0 1))
+          (field      (split (subseq line 1) #\Tab)))
 
-    ;; if split worked
-    (when (= (length field) 4)
-      (let ((line-number (+ 1 (hash-table-count *links*)))
-            (text (car field))
-            (uri  (cadr field))
-            (host (caddr field))
-            (port (parse-integer (cadddr field))))
+      ;; if split worked
+      (when (= (length field) 4)
+        (let ((line-number (+ 1 (hash-table-count *links*)))
+              (text (car field))
+              (uri  (cadr field))
+              (host (caddr field))
+              (port (parse-integer (cadddr field))))
 
-        ;; see RFC 1436
-        ;; section 3.8
-        (if (member line-type *allowed-selectors* :test #'equal)
-            (progn
+          ;; see RFC 1436
+          ;; section 3.8
+          (if (member line-type *allowed-selectors* :test #'equal)
+              (progn
 
-              ;; RFC, page 4
-              (check "i"
-                     (print-with-color text))
+                ;; RFC, page 4
+                (check "i"
+                       (print-with-color text))
 
-              ;; 0 text file
-              (check "0"
-                     (setf (gethash line-number *links*)
-                           (make-location :host host :port port :uri uri :type line-type ))
-                     (print-with-color text 'file line-number))
+                ;; 0 text file
+                (check "0"
+                       (setf (gethash line-number *links*)
+                             (make-location :host host :port port :uri uri :type line-type ))
+                       (print-with-color text 'file line-number))
 
-              ;; 1 directory
-              (check "1"
-                     (setf (gethash line-number *links*)
-                           (make-location :host host :port port :uri uri :type line-type ))
-                     (print-with-color text 'folder line-number))
+                ;; 1 directory
+                (check "1"
+                       (setf (gethash line-number *links*)
+                             (make-location :host host :port port :uri uri :type line-type ))
+                       (print-with-color text 'folder line-number))
 
-              ;; 2 CSO phone-book
-              ;; WE SKIP
-              (check "2")
+                ;; 2 CSO phone-book
+                ;; WE SKIP
+                (check "2")
 
-              ;; 3 Error
-              (check "3"
-                     (print-with-color "error" 'red line-number))
+                ;; 3 Error
+                (check "3"
+                       (print-with-color "error" 'red line-number))
 
-              ;; 4 BinHexed Mac file
-              (check "4"
-                     (print-with-color text))
+                ;; 4 BinHexed Mac file
+                (check "4"
+                       (print-with-color text))
 
-              ;; 5 DOS Binary archive
-              (check "5"
-                     (print-with-color "selector 5 not implemented" 'red))
+                ;; 5 DOS Binary archive
+                (check "5"
+                       (print-with-color "selector 5 not implemented" 'red))
 
-              ;; 6 Unix uuencoded file
-              (check "6"
-                     (print-with-color "selector 6 not implemented" 'red))
+                ;; 6 Unix uuencoded file
+                (check "6"
+                       (print-with-color "selector 6 not implemented" 'red))
 
-              ;; 7 Index search server
-              (check "7"
-                     (setf (gethash line-number *links*)
-                           (make-location :host host :port port :uri uri :type line-type ))
-                     (print-with-color text 'red line-number))
+                ;; 7 Index search server
+                (check "7"
+                       (setf (gethash line-number *links*)
+                             (make-location :host host :port port :uri uri :type line-type ))
+                       (print-with-color text 'red line-number))
 
-              ;; 8 Telnet session
-              (check "8"
-                     (print-with-color "selector 8 not implemented" 'red))
+                ;; 8 Telnet session
+                (check "8"
+                       (print-with-color "selector 8 not implemented" 'red))
 
-              ;; 9 Binary
-              (check "9"
-                     (setf (gethash line-number *links*)
-                           (make-location :host host :port port :uri uri :type line-type ))
-                     (print-with-color text 'red line-number))
+                ;; 9 Binary
+                (check "9"
+                       (setf (gethash line-number *links*)
+                             (make-location :host host :port port :uri uri :type line-type ))
+                       (print-with-color text 'red line-number))
 
-              ;; + redundant server
-              (check "+"
-                     (print-with-color "selector + not implemented" 'red))
+                ;; + redundant server
+                (check "+"
+                       (print-with-color "selector + not implemented" 'red))
 
-              ;; T text based tn3270 session
-              (check "T"
-                     (print-with-color "selector T not implemented" 'red))
+                ;; T text based tn3270 session
+                (check "T"
+                       (print-with-color "selector T not implemented" 'red))
 
-              ;; g GIF file
-              (check "g"
-                     (setf (gethash line-number *links*)
-                           (make-location :host host :port port :uri uri :type line-type))
-                     (print-with-color text 'red line-number))
+                ;; g GIF file
+                (check "g"
+                       (setf (gethash line-number *links*)
+                             (make-location :host host :port port :uri uri :type line-type))
+                       (print-with-color text 'red line-number))
 
-              ;; I image
-              (check "I"
-                     (setf (gethash line-number *links*)
-                           (make-location :host host :port port :uri uri :type line-type ))
-                     (print-with-color text 'red line-number))
+                ;; I image
+                (check "I"
+                       (setf (gethash line-number *links*)
+                             (make-location :host host :port port :uri uri :type line-type ))
+                       (print-with-color text 'red line-number))
 
-              ;; h http link
-              (check "h"
-                     (setf (gethash line-number *links*) uri)
-                     (print-with-color text 'http line-number))) ;;;; end of known types
+                ;; h http link
+                (check "h"
+                       (setf (gethash line-number *links*) uri)
+                       (print-with-color text 'http line-number))) ;;;; end of known types
 
-            ;; unknown type
-            (print-with-color (format nil
-                                      "invalid type ~a : ~a" line-type text)
-                              'red))))))
+              ;; unknown type
+              (print-with-color (format nil
+                                        "invalid type ~a : ~a" line-type text)
+                                'red)))))))
 
 (defun download-binary(host port uri)
   (easy-socket
@@ -338,6 +333,22 @@
 
   (display-interactive-menu))
 
+(defun load-file-menu(path)
+  
+  ;; we set the buffer
+  (setf *buffer*
+        (make-array 200
+                    :fill-pointer 0
+                    :initial-element nil
+                    :adjustable t))
+
+  (with-open-file (stream path
+                          :direction :input)
+    (loop for line = (read-line stream nil nil)
+       while line
+       do
+         (vector-push line *buffer*)))
+  (display-interactive-menu))
 
 (defun p()
   "browse to the previous link"
@@ -350,51 +361,11 @@
   (when (<= 1 (length *history*))
     (visit (pop *history*))))
 
-(defun load-bookmark()
-  "Restore the bookmark from file"
-  (when (probe-file *bookmark-file*)
-    (with-open-file (x *bookmark-file* :direction :input)
-      (setf *bookmarks* (read x)))))
-
-(defun save-bookmark()
-  "Dump the bookmark to file"
-  (with-open-file (x *bookmark-file*
-                     :direction :output
-                     :if-does-not-exist :create
-                     :if-exists :supersede)
-    (print *bookmarks* x)))
-
-(defun add-bookmark()
-  "Add a new bookmark"
-  (push (car *history*) *bookmarks*)
-  (save-bookmark))
-
-(defun show-bookmarks()
-  "display the bookmarks like a page"
-  (setf *links* (make-hash-table))
-
-  ;; for each bookmark we add it to *links*
-  ;; and display it
-  (loop for bookmark in *bookmarks*
-     counting bookmark into line-number
-     while bookmark
-     do
-       (progn
-         (setf (gethash line-number *links*)  bookmark)
-         (print-with-color (concatenate 'string
-                                        (location-host bookmark)
-                                        " "
-                                        (location-type bookmark)
-                                        (location-uri bookmark))
-                           'file line-number))))
-
 (defun help-shell()
   "show help for the shell"
   (format t "number            : go to link n~%")
   (format t "p or /            : go to previous page~%")
   (format t "h                 : display history~%")
-  (format t "b or -            : display bookmarks and choose a link from it~%")
-  (format t "a or +            : add a bookmark~%")
   (format t "r or *            : reload the page~%")
   (format t "help              : show this help~%")
   (format t "d                 : dump the raw reponse~%")
@@ -403,29 +374,36 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-  (let ((url (if (search "gopher://" url)
-                 (subseq url 9)
-                 url)))
+  (if (probe-file url)
+      (progn
+        (load-file-menu url)
+        (make-location :host 'local-file
+                       :port nil
+                       :type "1"
+                       :uri url))
+      (let ((url (if (search "gopher://" url)
+                     (subseq url 9)
+                     url)))
 
-    ;; splitting with / to get host:port and uri
-    ;; splitting host and port to get them
-    (let* ((infos      (split url #\/))
-           (host-port (split (pop infos) #\:)))
+        ;; splitting with / to get host:port and uri
+        ;; splitting host and port to get them
+        (let* ((infos      (split url #\/))
+               (host-port (split (pop infos) #\:)))
 
-      ;; create the location to visit
-      (make-location  :host (pop host-port)
+          ;; create the location to visit
+          (make-location  :host (pop host-port)
+                          
+                          ;; default to port 70 if not supplied
+                          :port (if host-port ;; <- empty if no port given
+                                    (parse-integer (car host-port))
+                                    70)
 
-                      ;; default to port 70 if not supplied
-                      :port (if host-port ;; <- empty if no port given
-                                (parse-integer (car host-port))
-                                70)
-
-                      ;; if type is empty we default to "1"
-                      :type (let ((type (pop infos)))
-                              (if (< 0 (length type)) type "1"))
-
-                      ;; glue remaining args between them
-                      :uri (format nil "~{/~a~}" infos)))))
+                          ;; if type is empty we default to "1"
+                          :type (let ((type (pop infos)))
+                                  (if (< 0 (length type)) type "1"))
+                          
+                          ;; glue remaining args between them
+                          :uri (format nil "~{/~a~}" infos))))))
 
 (defun get-argv()
   "Parse argv and return it"
@@ -439,18 +417,6 @@
     ;; show help
     ((string= "help" input)
      (help-shell))
-
-    ;; bookmark current link
-    ((or
-      (string= "a" input)
-      (string= "+" input))
-     (add-bookmark))
-
-    ;; show bookmarks
-    ((or
-      (string= "b" input)
-      (string= "-" input))
-     (show-bookmarks))
 
     ((or
       (string= "*" input)
@@ -619,9 +585,11 @@
 
            ;; fetch a menu
            ((string= "1" (location-type destination))
-            (getpage (location-host destination)
-                     (location-port destination)
-                     (location-uri  destination))
+            (if (eql 'local-file (location-host destination))
+                'menu
+                (getpage (location-host destination)
+                         (location-port destination)
+                         (location-uri  destination)))
             'menu)
 
            ;; fetch a text file
@@ -707,26 +675,28 @@
   with a parameter not of type 1, so it will fetch the content,
   display it and exit and finally, the redirected case where clic will
   print to stdout and exit."
-  (let ((destination
-         (let ((argv (get-argv)))
-           ;; parsing command line parameter
-           ;; if not empty we use it or we will use a default url
-           (if argv
-               (parse-url argv)
-               (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
 
-    ;; is there an output redirection ?
-    (if (ttyp)
-        ;; if we don't ask a menu, not going interactive
-        (if (not (string= "1" (location-type destination)))
-            ;; not interactive
-            (visit destination)
-            ;; if user want to drop from first page we need
-            ;; to look it here
-            (when (not (eq 'end (visit destination)))
-              ;; we continue to the shell if we are in a terminal
-              (shell)))
-        (pipe-to-stdout destination))))
+  (ignore-errors ;; lisp is magic
+    (let ((destination
+           (let ((argv (get-argv)))
+             ;; parsing command line parameter
+             ;; if not empty we use it or we will use a default url
+             (if argv
+                 (parse-url argv)
+                 (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
+
+      ;; is there an output redirection ?
+      (if (ttyp)
+          ;; if we don't ask a menu, not going interactive
+          (if (not (string= "1" (location-type destination)))
+              ;; not interactive
+              (visit destination)
+              ;; if user want to drop from first page we need
+              ;; to look it here
+              (when (not (eq 'end (visit destination)))
+                ;; we continue to the shell if we are in a terminal
+                (shell)))
+          (pipe-to-stdout destination)))))
 
 ;; we allow ecl to use a new kind of argument
 ;; not sure how it works but that works
@@ -734,4 +704,4 @@
 (defconstant +uri-rules+
   '(("*DEFAULT*" 1 "" :stop)))
 
-(load-bookmark)
+
