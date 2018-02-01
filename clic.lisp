@@ -378,36 +378,30 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-  (if (= 0 (search "file://" url))
-      (progn
-        (load-file-menu (subseq url 7))
-        (make-location :host 'local-file
-                       :port nil
-                       :type "1"
-                       :uri url))
-      (let ((url (if (search "gopher://" url)
-                     (subseq url 9)
-                     url)))
 
-        ;; splitting with / to get host:port and uri
-        ;; splitting host and port to get them
-        (let* ((infos      (split url #\/))
-               (host-port (split (pop infos) #\:)))
+  (let ((url (if (search "gopher://" url)
+                 (subseq url 9)
+                 url)))
 
-          ;; create the location to visit
-          (make-location  :host (pop host-port)
+    ;; splitting with / to get host:port and uri
+    ;; splitting host and port to get them
+    (let* ((infos      (split url #\/))
+           (host-port (split (pop infos) #\:)))
+
+      ;; create the location to visit
+      (make-location  :host (pop host-port)
                           
-                          ;; default to port 70 if not supplied
-                          :port (if host-port ;; <- empty if no port given
-                                    (parse-integer (car host-port))
-                                    70)
+                      ;; default to port 70 if not supplied
+                      :port (if host-port ;; <- empty if no port given
+                                (parse-integer (car host-port))
+                                70)
 
-                          ;; if type is empty we default to "1"
-                          :type (let ((type (pop infos)))
-                                  (if (< 0 (length type)) type "1"))
+                      ;; if type is empty we default to "1"
+                      :type (let ((type (pop infos)))
+                              (if (< 0 (length type)) type "1"))
                           
-                          ;; glue remaining args between them
-                          :uri (format nil "~{/~a~}" infos))))))
+                      ;; glue remaining args between them
+                      :uri (format nil "~{/~a~}" infos)))))
 
 (defun get-argv()
   "Parse argv and return it"
@@ -682,7 +676,16 @@
              ;; parsing command line parameter
              ;; if not empty we use it or we will use a default url
              (if argv
-                 (parse-url argv)
+                 ;; is it a file ?
+                 (if (= 0 (search "file://" argv))
+                     (progn
+                       (load-file-menu (subseq argv 7))
+                       (make-location :host 'local-file
+                                      :port nil
+                                      :type "1"
+                                      :uri argv))
+                     ;; it's not a file, create a location
+                     (parse-url argv))
                  (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
 
       ;; is there an output redirection ?
