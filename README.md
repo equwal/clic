@@ -68,8 +68,6 @@ Keyboard bindings
 -----------------
 
 + 1-999 : follow the link "number"
-+ a : add to bookmark (it saves the file too)
-+ b : display bookmarks and choose a link
 + p : previous page
 + h : display history
 + r : reload the page
@@ -83,19 +81,19 @@ permitting to use clic with the numpad with only one hand :
 + "a number" : follow the link "number
 + / : previous page
 + * : reload the page
-+ - : display bookmarks
-+ + : add to bookmark
 + . : quit
 
 
 Command line usage
 ==================
 
+clic [url|file]
+
 If you pass a gopher url to clic (gopher:// isn't mandatory for the
 url), the behavor will change depending on two parameters :
 
 1. is the output a pipe/redirection ?
-2. is the url type a menu ? (types 1 or 4)
+2. is the url type a menu ? (types 1 or 7)
 
 If the output is a pipe or a redirection, clic will send the raw data
 to stdout (text for type 0 and binary for others types)
@@ -104,5 +102,12 @@ If the output is the terminal, clic will download the file in /tmp/
 folder and then call $PAGER if the type is 0 (text) or xdg-open for
 others types.
 
-If the url is a type 0 or 4 and the output is a terminal, it will open
+If the url is a type 0 or 7 and the output is a terminal, it will open
 clic and stay in interactive mode.
+
+Clic can open a local file respecting the gopher menu protocol, this
+can be used to create a bookmark file and load it locally without a
+gopher server. You just need to pass the file as a parameter, like the
+following example :
+
+    clic my_file.txt
