@@ -48,9 +48,6 @@
 ;;; array of lines of last menu
 (defparameter *previous-buffer* nil)
 
-;;; boolean if we are interactive or not
-(defparameter *not-interactive* nil)
-
 ;;; a list containing the last viewed pages
 (defparameter *history*   '())
 
@@ -123,6 +120,22 @@
 (defun print-with-color(text &optional (color 'reset) (line-number nil))
   "Used to display a line with a color"
   (format t "~3A| ~a~a~a~%" (if line-number line-number "") (get-color color) text (get-color 'reset)))
+
+(defmacro easy-socket(&body code)
+  "avoid duplicated code used for sockets"
+  `(progn
+     (let* ((address (sb-bsd-sockets:get-host-by-name host))
+            (host (car (sb-bsd-sockets:host-ent-addresses address)))
+            (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
+
+       (sb-bsd-sockets:socket-connect socket host port)
+
+       ;; we open a stream for input/output
+       (let ((stream (sb-bsd-sockets:socket-make-stream socket
+                                                        :input t
+                                                        :output t
+                                                        :element-type :default)))
+         ,@code))))
 
 (defmacro check(identifier &body code)
   "Macro to define a new syntax to make 'when' easier for formatted-output function"
@@ -243,7 +256,30 @@
                                       "invalid type ~a : ~a" line-type text)
                               'red))))))
 
-(defun getpage(host port uri &optional (binary nil) (search nil))
+(defun download-binary(host port uri)
+  (easy-socket
+   ;; sending the request to the server
+   (format stream "~a~a~a" uri #\Return #\Newline)
+   (force-output stream)
+
+
+   ;; save into a file in /tmp
+   (let* ((filename (subseq uri (1+ (position #\/ uri :from-end t))))
+          (path (concatenate 'string "/tmp/" filename)))
+     (with-open-file (output path
+                             :element-type '(unsigned-byte 8)
+                             :direction :output :if-exists :supersede)
+       (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
+         (loop for pos = (read-sequence buf stream)
+            while (plusp pos)
+            do
+              (format t ".")
+              (force-output)
+              (write-sequence buf output :end pos)))
+       (format t "~%File downloaded into ~a (~a bytes)~%" path (file-length output))))))
+
+
+(defun getpage(host port uri &optional (search nil))
   "send a request and store the answer (in *buffer* if text or save a file if binary)"
 
   ;; we reset the buffer
@@ -253,61 +289,21 @@
                     :initial-element nil
                     :adjustable t))
 
-  ;; we prepare informations about the connection
-  (let* ((address (sb-bsd-sockets:get-host-by-name host))
-         (host (car (sb-bsd-sockets:host-ent-addresses address)))
-         (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp))
-         (real-time (get-internal-real-time)))
+  (let ((real-time (get-internal-real-time)))
+    ;; we prepare informations about the connection
+    (easy-socket
+     ;; sending the request to the server
+     (if search
+         (format stream "~a	~a~a~a" uri search #\Return #\Newline)
+         (format stream "~a~a~a"       uri #\Return #\Newline))
+     (force-output stream)
 
-    (sb-bsd-sockets:socket-connect socket host port)
-
-    ;; we open a stream for input/output
-    (let ((stream (sb-bsd-sockets:socket-make-stream socket
-                                                     :input t
-                                                     :output t
-                                                     :element-type :default)))
-      ;; sending the request to the server
-      (if search
-          (progn
-            (format t "Input : ")
-            (let ((user-input (read-line nil nil)))
-              (format stream "~a	~a~a~a" uri user-input #\Return #\Newline)))
-          (format stream "~a~a~a" uri #\Return #\Newline))
-      (force-output stream)
-
-      (if binary
-          ;; binary
-
-          ;; in terminal = save the file
-          ;; not terminal = write to stdio
-          (if (ttyp)
-              ;; save into a file in /tmp
-              (let* ((filename (subseq uri (1+ (position #\/ uri :from-end t))))
-                     (path (concatenate 'string "/tmp/" filename)))
-                (with-open-file (output path
-                                        :element-type '(unsigned-byte 8)
-                                        :direction :output :if-exists :supersede)
-                  (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
-                    (loop for pos = (read-sequence buf stream)
-                       while (plusp pos)
-                       do
-                         (format t ".")
-                         (force-output)
-                         (write-sequence buf output :end pos)))
-                  (format t "~%File downloaded into ~a (~a bytes)~%" path (file-length output))))
-
-              ;; write to the standard output
-              (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
-                (loop for pos = (read-sequence buf stream)
-                   while (plusp pos)
-                   do
-                     (write-sequence buf *standard-output* :end pos))))
-          ;; not binary
-          ;; for each line we receive we store it in *buffer*
-          (loop for line = (read-line stream nil nil)
-             while line
-             do
-               (vector-push line *buffer*))))
+     ;; not binary
+     ;; for each line we receive we store it in *buffer*
+     (loop for line = (read-line stream nil nil)
+        while line
+        do
+          (vector-push line *buffer*)))
 
     ;; we store the duration of the connection
     (setf *duration* (float (/ (- (get-internal-real-time) real-time)
@@ -340,7 +336,7 @@
        (when (search text (car (split (subseq line 1) #\Tab)) :test #'char-equal)
          (vector-push line *buffer*)))
 
-  (display-buffer "1"))
+  (display-interactive-menu))
 
 
 (defun p()
@@ -507,146 +503,175 @@
      (ignore-errors
        (g (parse-integer input))))))
 
-(defun display-buffer(type)
-  "display the buffer"
+(defun display-interactive-binary-file()
+  "call xdg-open on the binary file"
+  (let* ((location (car *history*))
+         (filename (subseq ;; get the text after last /
+                    (location-uri location)
+                    (1+ (position #\/
+                                  (location-uri location)
+                                  :from-end t))))
+         (filepath (concatenate 'string "/tmp/" (or filename "index"))))
+    (uiop:run-program (list "xdg-open" filepath))))
 
-  ;;;; stdout is a terminal or not ?
-  (if (ttyp)
-      ;;;; we are in interactive mode
-      (cond
-        ;;;; output is a text file ?
-        ;;;; call the $PAGER !
-       ((string= "0" type)
-	         ;;; generate a string from *buffer* array
-	(let* ((uri (location-uri (car *history*)))
-	       (filename (subseq uri (1+ (position #\/ uri :from-end t))))
-               (path (concatenate 'string "/tmp/" filename)))
-          (with-open-file (output path
-                                  :direction :output
-                                  :if-does-not-exist :create
-                                  :if-exists :supersede)
-            (loop for line across *buffer*
-               do
-                 (format output "~a~%" line)))
-          (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
-                            :input :interactive
-                            :output :interactive))
-	 ;; display last menu
-	 (pop *history*)
-	 (when *previous-buffer*
-	   (setf *buffer* (copy-array *previous-buffer*))
-	   (setf *links* (make-hash-table))
-	   (display-buffer "1")))
+(defun display-text-stdout()
+  "display the buffer to stdout"
+  (loop for line across *buffer*
+     do
+       (format t "~a~%" line)))
 
-        ;; image
-        ((or
-          (string= "I" type)
-          (string= "9" type))
-         (let ((location (car *history*)))
-           (uiop:run-program (list "xdg-open"
-                                   (concatenate 'string
-                                                "/tmp/"
-                                                (subseq ;; get the text after last /
-                                                 (location-uri location)
-                                                 (1+ (position #\/
-                                                               (location-uri location)
-                                                               :from-end t)))))))
-         (pop *history*)
-         (when *previous-buffer*
-           (setf *buffer* (copy-array *previous-buffer*))
-           (setf *links* (make-hash-table))
-           (display-buffer "1")))
-
-
-        ;;;; output is a menu ?
-        ;;;; display the menu and split it in pages if needed
-        ((or
-          (string= "1" type)
-          (string= "7" type))
-
-         ;; we store the user input outside of the loop
-         ;; so if the user doesn't want to scroll
-         ;; we break the loop and then execute the command
-         (let ((input nil))
-           (let ((rows (- (c-termsize) 1))) ; -1 for command bar
-
-             (loop for line across *buffer*
-                counting line into row
-                do
-                  (formatted-output line)
-
-                ;; split and ask to scroll or to type a command
-                  (when (= row rows)
-                    (setf row 0)
-                    (format t "~a   press enter or a shell command ~a : "
-                            (get-color 'bg-black)
-                            (get-color 'reset))
-                    (force-output)
-                    (let ((first-input (read-char *standard-input* nil nil t)))
-                      (cond
-		       ((not first-input)
-			(format t "~%") ;; display a newline
-			(setf input "x") ;; we exit
-			(loop-finish))
-		       ((char= #\NewLine first-input)
-			;; we hide previous line (prompt)
-			(format t "'~C[A~C[K~C" #\Escape #\Escape #\return))
-		       (t
-			(unread-char first-input)
-			(let ((input-text (format nil "~a" (read-line nil nil))))
-			  (setf input input-text)
-			  (loop-finish)))))))
-
-             ;; in case of shell command, do it
-             (if input
-                 (user-input input)
-                 (when (< (length *buffer*) rows)
-                   (dotimes (i (- rows (length *buffer*)))
-                     (format t "~%"))))))))
-
-      ;; display and quit
+(defun display-with-pager()
+  (let* ((uri (location-uri (car *history*)))
+         (filename (subseq uri (1+ (position #\/ uri :from-end t))))
+         (path (concatenate 'string "/tmp/" (or filename "index"))))
+    (with-open-file (output path
+                            :direction :output
+                            :if-does-not-exist :create
+                            :if-exists :supersede)
       (loop for line across *buffer*
          do
-           (format t "~a~%" line))))
+           (format output "~a~%" line)))
+    (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
+                      :input :interactive
+                      :output :interactive)))
+
+(defun display-interactive-menu()
+  "display a menu"
+  ;; we store the user input outside of the loop
+  ;; so if the user doesn't want to scroll
+  ;; we break the loop and then execute the command
+  (let ((input nil))
+    (let ((rows (- (c-termsize) 1))) ; -1 for command bar
+
+      (loop for line across *buffer*
+         counting line into row
+         do
+           (formatted-output line)
+
+         ;; split and ask to scroll or to type a command
+           (when (= row rows)
+             (setf row 0)
+             (format t "~a   press enter or a shell command ~a : "
+                     (get-color 'bg-black)
+                     (get-color 'reset))
+             (force-output)
+             (let ((first-input (read-char *standard-input* nil nil t)))
+               (cond
+                 ((not first-input)
+                  (format t "~%") ;; display a newline
+                  (setf input "x") ;; we exit
+                  (loop-finish))
+                 ((char= #\NewLine first-input)
+                  ;; we hide previous line (prompt)
+                  (format t "'~C[A~C[K~C" #\Escape #\Escape #\return))
+                 (t
+                  (unread-char first-input)
+                  (let ((input-text (format nil "~a" (read-line nil nil))))
+                    (setf input input-text)
+                    (loop-finish)))))))
+
+      ;; in case of shell command, do it
+      (if input
+          (user-input input)
+          (when (< (length *buffer*) rows)
+            (dotimes (i (- rows (length *buffer*)))
+              (format t "~%")))))))
+
+(defun pipe-text(host port uri)
+  (getpage host port uri)
+  (loop for line across *buffer*
+     do
+       (format t "~a~%" line)))
+
+(defun pipe-binary(host port uri)
+  (easy-socket
+   (format stream "~a~a~a" uri #\Return #\Newline)
+   (force-output stream)
+
+   ;; write to the standard output
+   (let ((buf (make-array 4096 :element-type '(unsigned-byte 8))))
+     (loop for pos = (read-sequence buf stream)
+        while (plusp pos)
+        do
+          (write-sequence buf *standard-output* :end pos)))))
+
+(defun pipe-to-stdout(destination)
+  "fetch data and output to stdout without storing anything"
+
+  (if (or
+       (string= "0" (location-type destination))
+       (string= "1" (location-type destination))
+       (string= "7" (location-type destination)))
+
+      (pipe-text (location-host destination)
+                 (location-port destination)
+                 (location-uri  destination))
+
+      (pipe-binary (location-host destination)
+                   (location-port destination)
+                   (location-uri  destination))))
 
 (defun visit(destination)
-  "visit a location"
+  "fetch and display content interactively"
 
-  (cond
+  (let ((type
+         (cond
 
-    ;; we retrieve text / lines
-    ;; when type is 1 or 0
-    ((or
-      (string= "1" (location-type destination))
-      (string= "0" (location-type destination)))
-  
-     (getpage (location-host destination)
-              (location-port destination)
-              (location-uri  destination)))
+           ;; fetch a menu
+           ((string= "1" (location-type destination))
+            (getpage (location-host destination)
+                     (location-port destination)
+                     (location-uri  destination))
+            'menu)
 
-    ((string= "7" (location-type destination))
-     (getpage (location-host destination)
-              (location-port destination)
-              (location-uri  destination)
-              nil t))
+           ;; fetch a text file
+           ((string= "0" (location-type destination))
+            (getpage (location-host destination)
+                     (location-port destination)
+                     (location-uri  destination))
+            'text)
 
-    (t
-     (getpage (location-host destination)
-              (location-port destination)
-              (location-uri  destination)
-              t)))
+           ;; fetch a menu after search
+           ((string= "7" (location-type destination))
+            (format t "Input : ")
+            (let ((user-input (read-line nil nil)))
+              (getpage (location-host destination)
+                       (location-port destination)
+                       (location-uri  destination)
+                       user-input))
+            'menu)
+
+           ;; if not type 0 1 7 then it's binary
+           (t
+            (download-binary (location-host destination)
+                             (location-port destination)
+                             (location-uri destination))
+            'binary))))
 
 
-  ;; we reset the links table ONLY if we have a new folder
-  ;; we also keep the last menu buffer
-  (when (string= "1" (location-type destination))
-    (setf *previous-buffer* (copy-array *buffer*))
-    (setf *links* (make-hash-table)))
-  
-  ;; goes to the history !
-  (push destination *history*)
-  
-  (display-buffer (location-type destination)))
+    ;; we reset the links table ONLY if we have a new menu
+    ;; we also keep the last menu buffer
+    (when (eql type 'menu)
+      (setf *previous-buffer* (copy-array *buffer*))
+      (setf *links* (make-hash-table)))
+
+    ;; add it to the history !
+    (push destination *history*)
+
+    (if (eql type 'menu)
+        (display-interactive-menu)
+        (progn
+          (if (eql type 'text)
+              (display-with-pager)
+              (display-interactive-binary-file))
+          ;; redraw last menu
+          ;; we need to get previous buffer and reset links numbering
+          (pop *history*)
+          (when *previous-buffer*
+            (setf *buffer* (copy-array *previous-buffer*))
+            (setf *links* (make-hash-table))
+            (display-interactive-menu))))))
+
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
@@ -664,37 +689,44 @@
 
   ;; we loop until X or Q is typed
   (loop for input = (format nil "~a" (read-line nil nil))
-	while (not (or
-		    (string= "NIL" input) ;; ^D
-		    (string= "exit" input)
-		    (string= "x" input)
-		    (string= "q" input)))
-	do
-	(when (eq 'end (user-input input))
-	  (loop-finish))
-	(display-prompt)))
+     while (not (or
+                 (string= "NIL" input) ;; ^D
+                 (string= "exit" input)
+                 (string= "x" input)
+                 (string= "q" input)))
+     do
+       (when (eq 'end (user-input input))
+         (loop-finish))
+       (display-prompt)))
 
 (defun main()
-  "fetch argument, display page and go to shell if type is 1"
+  "entry function of clic, we need to determine if the usage is one of
+  the 3 following cases : interactive, not interactive or
+  piped. Interactive is the state where the user will browse clic for
+  multiple content. Not interactive is the case where clic is called
+  with a parameter not of type 1, so it will fetch the content,
+  display it and exit and finally, the redirected case where clic will
+  print to stdout and exit."
   (let ((destination
          (let ((argv (get-argv)))
+           ;; parsing command line parameter
+           ;; if not empty we use it or we will use a default url
            (if argv
-               ;; url as argument
                (parse-url argv)
-               ;; default url
                (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
 
-    ;; if we don't ask a menu, not going interactive
-    (if (not (string= "1" (location-type destination)))
-        ;; not interactive
-        (visit destination)
-
-        ;; if user want to drop from first page we need
-        ;; to look it here
-      (when (not (eq 'end (visit destination)))
-	;; we continue to the shell if we are in a terminal
-	(when (ttyp)
-	  (shell))))))
+    ;; is there an output redirection ?
+    (if (ttyp)
+        ;; if we don't ask a menu, not going interactive
+        (if (not (string= "1" (location-type destination)))
+            ;; not interactive
+            (visit destination)
+            ;; if user want to drop from first page we need
+            ;; to look it here
+            (when (not (eq 'end (visit destination)))
+              ;; we continue to the shell if we are in a terminal
+              (shell)))
+        (pipe-to-stdout destination))))
 
 ;; we allow ecl to use a new kind of argument
 ;; not sure how it works but that works
