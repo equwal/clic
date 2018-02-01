@@ -111,6 +111,10 @@
   "Used to display a line with a color"
   (format t "~3A| ~a~a~a~%" (if line-number line-number "") (get-color color) text (get-color 'reset)))
 
+(defmacro foreach-buffer(&body code)
+  `(progn
+     (loop for line across *buffer* do ,@code)))          
+
 (defmacro easy-socket(&body code)
   "avoid duplicated code used for sockets"
   `(progn
@@ -374,9 +378,9 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-  (if (probe-file url)
+  (if (= 0 (search "file://" url))
       (progn
-        (load-file-menu url)
+        (load-file-menu (subseq url 7))
         (make-location :host 'local-file
                        :port nil
                        :type "1"
@@ -445,9 +449,8 @@
 
     ;; dump raw informations
     ((string= "d" input)
-     (loop for c across *buffer*
-        do
-          (format t "~a~%" c)))
+     (foreach-buffer
+      (format t "~a~%" line)))
 
     ;; exit
     ((or
@@ -482,9 +485,8 @@
 
 (defun display-text-stdout()
   "display the buffer to stdout"
-  (loop for line across *buffer*
-     do
-       (format t "~a~%" line)))
+  (foreach-buffer
+   (format t "~a~%" line)))
 
 (defun display-with-pager()
   (let* ((uri (location-uri (car *history*)))
@@ -494,9 +496,8 @@
                             :direction :output
                             :if-does-not-exist :create
                             :if-exists :supersede)
-      (loop for line across *buffer*
-         do
-           (format output "~a~%" line)))
+      (foreach-buffer
+       (format output "~a~%" line)))
     (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
                       :input :interactive
                       :output :interactive)))
@@ -545,9 +546,8 @@
 
 (defun pipe-text(host port uri)
   (getpage host port uri)
-  (loop for line across *buffer*
-     do
-       (format t "~a~%" line)))
+  (foreach-buffer
+   (format t "~a~%" line)))
 
 (defun pipe-binary(host port uri)
   (easy-socket
