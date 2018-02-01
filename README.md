@@ -72,7 +72,7 @@ Keyboard bindings
 + h : display history
 + r : reload the page
 + x or q or ^D : quit
-+ / pattern : redisplay the menu only with lines containing pattern (no regex)
++ / pattern : redisplay the menu only with lines containing string (no regex)
 + d : display the raw response
 
 In addition to the previous keybinding, a different layout coexists,
