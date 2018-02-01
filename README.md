@@ -107,7 +107,7 @@ clic and stay in interactive mode.
 
 Clic can open a local file respecting the gopher menu protocol, this
 can be used to create a bookmark file and load it locally without a
-gopher server. You just need to pass the file as a parameter, like the
-following example :
+gopher server. In order to proceed, you need to pass the file path as
+a parameter beginning with file://, like the following example :
 
-    clic my_file.txt
+    clic file://path/to/my_file.txt
