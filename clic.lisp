@@ -677,7 +677,7 @@
              ;; if not empty we use it or we will use a default url
              (if argv
                  ;; is it a file ?
-                 (if (= 0 (search "file://" argv))
+                 (if (= 0 (or (search "file://" argv) 1))
                      (progn
                        (load-file-menu (subseq argv 7))
                        (make-location :host 'local-file
