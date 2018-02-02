@@ -637,7 +637,7 @@
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
-    (format t "gopher://~a:~a/~a~a (~as) / (P)rev (R)eload (B)ookmark (H)istory : "
+    (format t "gopher://~a:~a/~a~a (~as) / (P)rev (R)eload (H)istory : "
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
