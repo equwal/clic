@@ -1,0 +1,62 @@
+.TH CLIC 1 clic\-VERSION
+.SH NAME
+clic \- a terminal gopher client
+.SH SYNOPSIS
+.B clic
+.IR [URL]
+.PP
+.SH DESCRIPTION
+.B clic
+is a terminal gopher client. Gopher is a simple protocol to retreive
+hierarchical information. The protocol is defined in
+.I RFC 1436
+(Gopher).
+.SH COMMANDS
+Clic is using a simple commandline for telling it what to do. Here are the
+commands you can enter.
+.TP
+.B Number
+go to link with the specified number.
+.TP
+.B p or / or cd ..
+Go to previous page.
+.TP
+.B h
+Display the history.
+.TP
+.B b or -
+Display the bookmarks and choose a link from it.
+.TP
+.B a or +
+Add a bookmark.
+.TP
+.B d
+Dump raw item information.
+.TP
+.B r or ls or *
+Reload the page.
+.TP
+.B help
+Show the help page.
+.TP
+.B / text
+Search for the specified text.
+.TP
+.B ^D or x or q or . or exit
+Exit clic.
+.SH PLUMBER
+When some file is opened
+.I clic
+cannot open natively, it will run
+.I xdg-open.
+.SH AUTHORS
+See the LICENSE file for the authors.
+.SH LICENSE
+See the LICENSE file for the terms of redistribution.
+.SH SEE ALSO
+.BR geomyidae (8),
+.BR sacc (1),
+.BR xdg-open (1)
+.SH BUGS
+See the TODO file in the distribution.
+
