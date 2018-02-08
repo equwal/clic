@@ -41,6 +41,15 @@
 (defstruct location host port type uri
            :predicate)
 
+;;;; kiosk mode on/off
+(defparameter *kiosk-mode* nil)
+
+(defmacro kiosk-mode(&body code)
+  "prevent code if kiosk mode is enabled"
+  `(progn
+     (when (not *kiosk-mode*)
+       ,@code)))
+
 ;;;; BEGIN GLOBAL VARIABLES
 
 ;;; array of lines in buffer
@@ -261,7 +270,6 @@
    (format stream "~a~a~a" uri #\Return #\Newline)
    (force-output stream)
 
-
    ;; save into a file in /tmp
    (let* ((filename (subseq uri (1+ (position #\/ uri :from-end t))))
           (path (concatenate 'string "/tmp/" filename)))
@@ -318,8 +326,9 @@
          (visit destination))
         ;; visit http link
         ((search "URL:" destination)
-         (uiop:run-program (list "xdg-open"
-                                 (subseq destination 4))))))))
+         (kiosk-mode
+	  (uiop:run-program (list "xdg-open"
+				  (subseq destination 4)))))))))
 
 (defun filter-line(text)
   "display only lines containg text"
@@ -334,7 +343,6 @@
      do
        (when (search text (car (split (subseq line 1) #\Tab)) :test #'char-equal)
          (vector-push line *buffer*)))
-
   (display-interactive-menu))
 
 (defun load-file-menu(path)
@@ -449,6 +457,7 @@
     ;; exit
     ((or
       (eql nil input)
+      (string= "NIL" input)
       (string= "." input)
       (string= "exit" input)
       (string= "x" input)
@@ -468,15 +477,16 @@
 
 (defun display-interactive-binary-file()
   "call xdg-open on the binary file"
-  (let* ((location (car *history*))
-         (filename (subseq ;; get the text after last /
-                    (location-uri location)
-                    (1+ (position #\/
-                                  (location-uri location)
-                                  :from-end t))))
-         (filepath (concatenate 'string "/tmp/" (or filename "index"))))
-    (uiop:run-program (list "xdg-open" filepath))))
-
+  (kiosk-mode
+   (let* ((location (car *history*))
+	  (filename (subseq ;; get the text after last /
+		     (location-uri location)
+		     (1+ (position #\/
+				   (location-uri location)
+				   :from-end t))))
+	  (filepath (concatenate 'string "/tmp/" (or filename "index"))))
+     (uiop:run-program (list "xdg-open" filepath)))))
+  
 (defun display-text-stdout()
   "display the buffer to stdout"
   (foreach-buffer
@@ -495,6 +505,13 @@
     (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
                       :input :interactive
                       :output :interactive)))
+
+;; display a text file using the pager by piping
+;; the data to out, no temp file
+(defun display-with-pager-kiosk()
+  (loop for line across *buffer*
+	do
+	(format t "~a~%" line)))
 
 (defun display-interactive-menu()
   "display a menu"
@@ -605,9 +622,10 @@
 
            ;; if not type 0 1 7 then it's binary
            (t
-            (download-binary (location-host destination)
-                             (location-port destination)
-                             (location-uri destination))
+	    (kiosk-mode
+	     (download-binary (location-host destination)
+			      (location-port destination)
+			      (location-uri destination)))
             'binary))))
 
 
@@ -624,20 +642,24 @@
         (display-interactive-menu)
         (progn
           (if (eql type 'text)
-              (display-with-pager)
-              (display-interactive-binary-file))
-          ;; redraw last menu
-          ;; we need to get previous buffer and reset links numbering
-          (pop *history*)
-          (when *previous-buffer*
-            (setf *buffer* (copy-array *previous-buffer*))
-            (setf *links* (make-hash-table))
-            (display-interactive-menu))))))
+              (if *kiosk-mode*
+                  (display-with-pager-kiosk)
+		  (display-with-pager))
+	    (kiosk-mode (display-interactive-binary-file)))
+	   ;; redraw last menu
+	   ;; we need to get previous buffer and reset links numbering
+	   (pop *history*)
+	   (when (and
+		  *previous-buffer*
+		  (not *kiosk-mode*))
+	     (setf *buffer* (copy-array *previous-buffer*))
+	     (setf *links* (make-hash-table))
+	     (display-interactive-menu))))))
 
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
-    (format t "gopher://~a:~a/~a~a (~as) / (P)rev (R)eload (H)istory : "
+    (format t "gopher://~a:~a/~a~a (~as) / (P)rev (R)edisplay (H)istory : "
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
@@ -706,5 +728,3 @@
 #+ecl
 (defconstant +uri-rules+
   '(("*DEFAULT*" 1 "" :stop)))
-
-

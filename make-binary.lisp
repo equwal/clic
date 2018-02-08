@@ -9,7 +9,7 @@
 #+ecl
 (progn
   (compile-file "clic.lisp" :system-p t)
-  (c:build-program "clic" :epilogue-code '(progn (main)) :lisp-files '("clic.o")))
+  (c:build-program "clic" :epilogue-code '(progn (handler-case (main)  (condition () (quit)))) :lisp-files '("clic.o")))
 #+sbcl
 (progn
   (require 'sb-bsd-sockets)
