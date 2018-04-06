@@ -12,11 +12,9 @@ Requirements
 clic requires a few dependencies :
 
    + ANSI compatible terminal emulator
-   + a Common LISP interpreter
+   + ecl common lisp interpreter
    + C compiler
    + Linux/OpenBSD/FreeBSD/NetBSD
-
-Both **ecl** and **sbcl** Common LISP compilers are supported.
 
 
 How to build
@@ -24,34 +22,15 @@ How to build
 
 `clic` binary must be compiled.
 
-To compile it with **ecl** :
+To compile it with **ecl**, it's really easy type the following
+command :
 
     make
 
-To compile it with **sbcl** :
-
-    make LISP=sbcl
-
 then you can use `make install` to deploy it in `/usr/bin/`.
 
-Note : when using sbcl, a shared library extension.o is created and
-then sbcl creates a binary linked against the library. But ecl will
-translate the whole lisp code to C and then compile it, but linking
-against ecl.
-
-**I (the author) recommend using ecl**.
-
-
-Information about the binary
-----------------------------
-If you compile clic with ecl, you will need ecl library installed on
-the computer, the startup time is really fast. While compiling clic
-with SBCL will provide a standalone binary embedding the whole SBCL
-compiler, weighting approximately 10 Mb with a slower startup time.
-
-If you use OpenBSD and SBCL, you will need wxallowed mountflag on the
-partition from where you try to start clic standalone because sbcl has
-a W^X issue.
+The binary will be linked to ecl shared library. You need to install
+ecl if you want to deploy clic binary on others systems.
 
 
 How to use clic
@@ -87,7 +66,12 @@ permitting to use clic with the numpad with only one hand :
 Command line usage
 ==================
 
-clic [url|file]
+clic [-k] [url|file]
+
+If you start clic with -k parameter, then kiosk mode is enabled, which
+mean it won't call any external program or save any data on the
+disk. Texts (type 0) will be shown as-this in the output. It only
+allow to use texts, menus and searches.
 
 If you pass a gopher url to clic (gopher:// isn't mandatory for the
 url), the behavor will change depending on two parameters :

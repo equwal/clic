@@ -2,7 +2,7 @@
 # See the LICENSE file for copyright and license details.
 .POSIX:
 
-VERSION = 0.1
+VERSION = 0.2
 
 BIN    = clic
 LISP   = ecl
@@ -10,17 +10,10 @@ PREFIX = /usr
 BINDIR = ${PREFIX}/bin
 MANDIR = ${PREFIX}/share/man
 
-all: extension.so ${BIN}
+all: ${BIN}
 
-${BIN}: clic.lisp make-binary.lisp
-	${LISP} --load make-binary.lisp
-
-standalone: clic.lisp extension.so make-binary.lisp
-	${MAKE} -e LISP=sbcl
-
-extension.so: extension.c
-	${CC} -Wall -fPIC -c extension.c
-	${LD} -shared -o extension.so extension.o
+${BIN}:	clic.lisp make-binary.lisp
+	ecl -load make-binary.lisp
 
 install: ${BIN}
 	@echo installing executable to "${DESTDIR}${PREFIX}/bin"
@@ -39,7 +32,7 @@ uninstall:
 	@rm -f ${DESTDIR}${MANDIR}/man1/clic.1
 
 clean:
-	rm -f "${BIN}" clic.o clic.eclh clic.cxx bookmark-test extension.so
+	rm -f "${BIN}" clic.o clic.eclh clic.cxx
 
 test: clean all
 	@sh run-test.sh ${LISP}

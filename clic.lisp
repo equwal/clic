@@ -1,23 +1,10 @@
 ;;; let's hide the loading
 (let ((*standard-output* (make-broadcast-stream)))
   (require 'asdf)
-  #+sbcl
-  (require 'sb-bsd-sockets)
   #+ecl
   (require 'sockets))
 
 ;;;; C binding to get terminal informations
-;;;; SBCL only
-#+sbcl
-(progn
-  (load-shared-object #p"./extension.so")
-  ;; getTerminalHeight
-  (declaim (inline getTerminalHeight))
-  (sb-alien:define-alien-routine "getTerminalHeight" unsigned-int)
-  (defun c-termsize ()
-    "return terminal height"
-    (sb-alien:with-alien ((res unsigned-int (getTerminalHeight))))))
-
 #+ecl
 (progn
   (ffi:clines "
@@ -41,7 +28,7 @@
 (defstruct location host port type uri
            :predicate)
 
-;;;; kiosk mode on/off
+;;;; kiosk mode 
 (defparameter *kiosk-mode* nil)
 
 (defmacro kiosk-mode(&body code)
@@ -98,8 +85,6 @@
   "return t if the output is a terminal"
   ;; we use this variable in case we don't want to be interactive
   ;; like when we use a cmd arg to get an image
-  #+sbcl
-  (interactive-stream-p *standard-output*)
   #+ecl
   (if (= 1 (c-ttyp))
       t
@@ -387,36 +372,44 @@
 (defun parse-url(url)
   "parse a gopher url and return a location"
 
-  (let ((url (if (search "gopher://" url)
-                 (subseq url 9)
-                 url)))
+  (cond ((or
+          (string= "--help" url)
+          (string= "-h"     url))
+         (help-shell)
+         (quit))
 
-    ;; splitting with / to get host:port and uri
-    ;; splitting host and port to get them
-    (let* ((infos      (split url #\/))
-           (host-port (split (pop infos) #\:)))
+        ((string= "-k" url)
+         (setf *kiosk-mode* t))
 
-      ;; create the location to visit
-      (make-location  :host (pop host-port)
+        (t
+
+         (let ((url (if (search "gopher://" url)
+                        (subseq url 9)
+                        url)))
+
+           ;; splitting with / to get host:port and uri
+           ;; splitting host and port to get them
+           (let* ((infos      (split url #\/))
+                  (host-port (split (pop infos) #\:)))
+
+             ;; create the location to visit
+             (make-location  :host (pop host-port)
+                             ;; default to port 70 if not supplied
+                             :port (if host-port ;; <- empty if no port given
+                                       (parse-integer (car host-port))
+                                       70)
+
+                             ;; if type is empty we default to "1"
+                             :type (let ((type (pop infos)))
+                                     (if (< 0 (length type)) type "1"))
                           
-                      ;; default to port 70 if not supplied
-                      :port (if host-port ;; <- empty if no port given
-                                (parse-integer (car host-port))
-                                70)
-
-                      ;; if type is empty we default to "1"
-                      :type (let ((type (pop infos)))
-                              (if (< 0 (length type)) type "1"))
-                          
-                      ;; glue remaining args between them
-                      :uri (format nil "~{/~a~}" infos)))))
+                             ;; glue remaining args between them
+                             :uri (format nil "~{/~a~}" infos)))))))
 
 (defun get-argv()
   "Parse argv and return it"
-  #+sbcl
-  (cadr *posix-argv*)
   #+ecl
-  (car (last (cdr (si::command-args)))))
+  (cdr (si::command-args)))
 
 (defun user-input(input)
   (cond
@@ -526,11 +519,13 @@
          do
            (formatted-output line)
 
+
          ;; split and ask to scroll or to type a command
            (when (= row rows)
              (setf row 0)
-             (format t "~a   press enter or a shell command ~a : "
+             (format t "~a~a   press enter or a shell command ~a : "
                      (get-color 'bg-black)
+                     (if *kiosk-mode* "KIOSK" "")
                      (get-color 'reset))
              (force-output)
              (let ((first-input (read-char *standard-input* nil nil t)))
@@ -659,7 +654,8 @@
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
-    (format t "gopher://~a:~a/~a~a (~as) / (p)rev (r)edisplay (h)istory : "
+    (format t "~agopher://~a:~a/~a~a (~as) / (p)rev (r)edisplay (h)istory : "
+            (if *kiosk-mode* "KIOSK " "")
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
@@ -707,8 +703,14 @@
                                       :type "1"
                                       :uri argv))
                      ;; it's not a file, create a location
-                     (parse-url argv))
-                 (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))))
+                     ;; it's either a list with parameters or a location
+                     (if (listp argv)
+                         (car (last (loop for element in argv collect (parse-url element))))
+                         (parse-url argv)))))))
+
+      ;; if we didn't passed a url as parameter, use a default
+      (if (not (location-p destination))
+          (setf destination (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))
 
       ;; is there an output redirection ?
       (if (ttyp)
