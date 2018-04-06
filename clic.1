@@ -3,7 +3,8 @@
 clic \- a terminal gopher client
 .SH SYNOPSIS
 .B clic
-.IR [-k] [URL]
+.RB [ \-k ]
+.IR [URL]
 .PP
 .SH DESCRIPTION
 .B clic
@@ -11,6 +12,11 @@ is a terminal gopher client. Gopher is a simple protocol to retreive
 hierarchical information. The protocol is defined in
 .I RFC 1436
 (Gopher).
+.SH OPTIONS
+.TP
+.B \-k
+activate the kiosk mode. (Disable running external applications, temp files,
+downloading etc.)
 .SH COMMANDS
 Clic is using a simple commandline for telling it what to do. Here are the
 commands you can enter.
