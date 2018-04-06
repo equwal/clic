@@ -80,6 +80,10 @@
 (add-color 'http       0 33)
 ;;;; END ANSI colors
 
+(defun clear()
+  "Clear the screen"
+  (format t "~A[H~@*~A[J" #\escape))
+
 ;;;; is the output interactive or a pipe ?
 (defun ttyp()
   "return t if the output is a terminal"
@@ -688,6 +692,7 @@
   display it and exit and finally, the redirected case where clic will
   print to stdout and exit."
 
+  (clear)
   (ignore-errors ;; lisp is magic
     (let ((destination
            (let ((argv (get-argv)))
