@@ -335,7 +335,7 @@
   (display-interactive-menu))
 
 (defun load-file-menu(path)
-  
+  "load a local file with a gophermap syntax and display it as a menu"
   ;; we set the buffer
   (setf *buffer*
         (make-array 200
@@ -348,8 +348,7 @@
     (loop for line = (read-line stream nil nil)
        while line
        do
-         (vector-push line *buffer*)))
-  (display-interactive-menu))
+         (vector-push line *buffer*))))
 
 (defun p()
   "browse to the previous link"
@@ -375,7 +374,6 @@
 
 (defun parse-url(url)
   "parse a gopher url and return a location"
-
   (cond ((or
           (string= "--help" url)
           (string= "-h"     url))
@@ -385,8 +383,14 @@
         ((string= "-k" url)
          (setf *kiosk-mode* t))
 
-        (t
+        ((= 0 (or (search "file://" url) 1))
+         (load-file-menu (subseq url 7))
+         (make-location :host 'local-file
+                        :port nil
+                        :type "1"
+                        :uri url))
 
+        (t
          (let ((url (if (search "gopher://" url)
                         (subseq url 9)
                         url)))
@@ -692,26 +696,11 @@
   display it and exit and finally, the redirected case where clic will
   print to stdout and exit."
 
-  (clear)
+  ;;(clear)
   (ignore-errors ;; lisp is magic
-    (let ((destination
-           (let ((argv (get-argv)))
-             ;; parsing command line parameter
-             ;; if not empty we use it or we will use a default url
-             (if argv
-                 ;; is it a file ?
-                 (if (= 0 (or (search "file://" argv) 1))
-                     (progn
-                       (load-file-menu (subseq argv 7))
-                       (make-location :host 'local-file
-                                      :port nil
-                                      :type "1"
-                                      :uri argv))
-                     ;; it's not a file, create a location
-                     ;; it's either a list with parameters or a location
-                     (if (listp argv)
-                         (car (last (loop for element in argv collect (parse-url element))))
-                         (parse-url argv)))))))
+    (let ((destination (car (last
+                             (loop for element in (get-argv)
+                                collect (parse-url element))))))
 
       ;; if we didn't passed a url as parameter, use a default
       (if (not (location-p destination))
