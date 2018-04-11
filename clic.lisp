@@ -696,7 +696,7 @@
   display it and exit and finally, the redirected case where clic will
   print to stdout and exit."
 
-  ;;(clear)
+  (clear)
   (ignore-errors ;; lisp is magic
     (let ((destination (car (last
                              (loop for element in (get-argv)
