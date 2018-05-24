@@ -361,11 +361,26 @@
   (when (<= 1 (length *history*))
     (visit (pop *history*))))
 
+(defun s(number)
+  "show url for the link $NUMBER"
+  (let ((destination (gethash number *links*)))
+    (if (not destination)
+        (format t "No link ~a~%" number)
+        (format t "gopher://~a~a/~a~a~%"
+                (location-host destination)
+                (let ((port (location-port destination)))
+                  (if (= 70 port)
+                      ""
+                      (format nil ":~a" port)))
+                (location-type destination)
+                (location-uri destination)))))
+
 (defun help-shell()
   "show help for the shell"
   (format t "number            : go to link n~%")
   (format t "p or /            : go to previous page~%")
   (format t "h                 : display history~%")
+  (format t "sNUMBER           : show url for link $NUMBER~%")
   (format t "r or *            : reload the page~%")
   (format t "help              : show this help~%")
   (format t "d                 : dump the raw reponse~%")
@@ -424,6 +439,9 @@
     ;; show help
     ((string= "help" input)
      (help-shell))
+
+    ((search "s" input)
+     (s (parse-integer (subseq input 1))))
 
     ((or
       (string= "*" input)

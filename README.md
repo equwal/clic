@@ -51,6 +51,7 @@ Keyboard bindings
 + h : display history
 + r : reload the page
 + x or q or ^D : quit
++ sNUMBER : show the gopher url for link $number
 + / pattern : redisplay the menu only with lines containing string (no regex)
 + d : display the raw response
 
