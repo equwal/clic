@@ -96,7 +96,7 @@
 
 (defun copy-array(from)
   "return a new array containing the same elements as the parameter"
-  (let ((dest (make-array 200
+  (let ((dest (make-array (length from)
                           :fill-pointer 0
                           :initial-element nil
                           :adjustable t)))
@@ -297,8 +297,12 @@
      ;; not binary
      ;; for each line we receive we store it in *buffer*
      (loop for line = (read-line stream nil nil)
+        count line into lines
         while line
         do
+        ;; increase array size if needed
+          (when (= lines (- (array-total-size *buffer*) 1))
+            (adjust-array *buffer* (+ 200 (array-total-size *buffer*))))
           (vector-push line *buffer*)))
 
     ;; we store the duration of the connection
@@ -322,7 +326,7 @@
 (defun filter-line(text)
   "display only lines containg text"
   (setf *previous-buffer* (copy-array *buffer*))
-  (setf *buffer* (make-array 200
+  (setf *buffer* (make-array 400
                              :fill-pointer 0
                              :initial-element nil
                              :adjustable t))
