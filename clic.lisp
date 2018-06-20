@@ -355,13 +355,13 @@
          (vector-push line *buffer*))))
 
 (defun p()
-  "browse to the previous link"
+  "browse back to previous menu"
   (when (<= 2 (length *history*))
     (pop *history*)
     (visit (pop *history*))))
 
 (defun r()
-  "browse to the previous link"
+  "reload the previous menu"
   (when (<= 1 (length *history*))
     (visit (pop *history*))))
 
