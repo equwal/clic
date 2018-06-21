@@ -16,6 +16,10 @@
     void gotoPledge() {
        pledge(\"dns inet stdio rpath tty wpath cpath proc exec\",NULL);
     }
+
+    void kioskPledge() {
+       pledge(\"dns inet stdio tty rpath\",NULL);
+    }
     #endif
 
     int ttyPredicate() {
@@ -23,6 +27,9 @@
     unsigned int getTerminalHeight()  {
       struct winsize w;
       return ioctl(1,TIOCGWINSZ,&w)<0?UINT_MAX:w.ws_row;}")
+  (ffi:def-function
+      ("kioskPledge" c-kiosk-pledge)
+      () :returning :void)
   (ffi:def-function
       ("gotoPledge" c-pledge)
       () :returning :void)
@@ -410,6 +417,7 @@
          (quit))
 
         ((string= "-k" url)
+         (c-kiosk-pledge)
          (setf *kiosk-mode* t))
 
         ((= 0 (or (search "file://" url) 1))
