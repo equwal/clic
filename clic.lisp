@@ -571,10 +571,8 @@
          ;; split and ask to scroll or to type a command
            (when (= row rows)
              (setf row 0)
-             (format t "~a~a   press enter or a shell command ~a : "
-                     (get-color 'bg-black)
-                     (if *kiosk-mode* "KIOSK" "")
-                     (get-color 'reset))
+             (format t "~a   press enter or a shell command: "
+                     (if *kiosk-mode* "KIOSK" ""))
              (force-output)
              (let ((first-input (read-char *standard-input* nil nil t)))
                (cond
@@ -735,7 +733,13 @@
   with a parameter not of type 1, so it will fetch the content,
   display it and exit and finally, the redirected case where clic will
   print to stdout and exit."
+
+  ;; pledge support on OpenBSD
   (c-pledge)
+
+  ;; re-enable SIGINT (Ctrl+C) disabled for loading clic
+  (ext:set-signal-handler ext:+sigint+ 'quit)
+
   (ignore-errors ;; lisp is magic
     (let ((destination (car (last
                              (loop for element in (get-argv)
