@@ -11,11 +11,21 @@
     #include <sys/ioctl.h>
     #include <limits.h>
     #include <unistd.h>
+
+    #ifdef __OpenBSD__
+    void gotoPledge() {
+       pledge(\"dns inet stdio rpath tty wpath cpath proc exec\",NULL);
+    }
+    #endif
+
     int ttyPredicate() {
       return isatty(fileno(stdout)); }
     unsigned int getTerminalHeight()  {
       struct winsize w;
       return ioctl(1,TIOCGWINSZ,&w)<0?UINT_MAX:w.ws_row;}")
+  (ffi:def-function
+      ("gotoPledge" c-pledge)
+      () :returning :void)
   (ffi:def-function
       ("getTerminalHeight" c-termsize)
       () :returning :unsigned-int)
@@ -717,8 +727,7 @@
   with a parameter not of type 1, so it will fetch the content,
   display it and exit and finally, the redirected case where clic will
   print to stdout and exit."
-
-  (clear)
+  (c-pledge)
   (ignore-errors ;; lisp is magic
     (let ((destination (car (last
                              (loop for element in (get-argv)
@@ -730,15 +739,17 @@
 
       ;; is there an output redirection ?
       (if (ttyp)
-          ;; if we don't ask a menu, not going interactive
-          (if (not (string= "1" (location-type destination)))
-              ;; not interactive
-              (visit destination)
-              ;; if user want to drop from first page we need
-              ;; to look it here
-              (when (not (eq 'end (visit destination)))
-                ;; we continue to the shell if we are in a terminal
-                (shell)))
+          (progn
+            (clear)
+            ;; if we don't ask a menu, not going interactive
+            (if (not (string= "1" (location-type destination)))
+                ;; not interactive
+                (visit destination)
+                ;; if user want to drop from first page we need
+                ;; to look it here
+                (when (not (eq 'end (visit destination)))
+                  ;; we continue to the shell if we are in a terminal
+                  (shell))))
           (pipe-to-stdout destination)))))
 
 ;; we allow ecl to use a new kind of argument
