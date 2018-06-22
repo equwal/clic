@@ -417,6 +417,7 @@
          (quit))
 
         ((string= "-k" url)
+         #+openbsd
          (c-kiosk-pledge)
          (setf *kiosk-mode* t))
 
@@ -735,6 +736,7 @@
   print to stdout and exit."
 
   ;; pledge support on OpenBSD
+  #+openbsd
   (c-pledge)
 
   ;; re-enable SIGINT (Ctrl+C) disabled for loading clic
