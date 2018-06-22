@@ -27,12 +27,14 @@
     unsigned int getTerminalHeight()  {
       struct winsize w;
       return ioctl(1,TIOCGWINSZ,&w)<0?UINT_MAX:w.ws_row;}")
-  (ffi:def-function
-      ("kioskPledge" c-kiosk-pledge)
-      () :returning :void)
-  (ffi:def-function
-      ("gotoPledge" c-pledge)
-      () :returning :void)
+  #+openbsd
+  (progn
+    (ffi:def-function
+     ("kioskPledge" c-kiosk-pledge)
+     () :returning :void)
+    (ffi:def-function
+     ("gotoPledge" c-pledge)
+     () :returning :void))
   (ffi:def-function
       ("getTerminalHeight" c-termsize)
       () :returning :unsigned-int)
