@@ -546,7 +546,11 @@
                             :if-exists :supersede)
       (foreach-buffer
        (format output "~a~%" line)))
-    (uiop:run-program (list (or (uiop:getenv "PAGER") "less") path)
+    (uiop:run-program (nconc
+                       (if (uiop:getenv "PAGER")
+                           (split (uiop:getenv "PAGER") #\Space)
+                           (list "less"))
+                       (list path))
                       :input :interactive
                       :output :interactive)))
 
