@@ -2,7 +2,6 @@
 # See the LICENSE file for copyright and license details.
 .POSIX:
 
-VERSION = 0.2
 
 BIN    = clic
 LISP   = ecl
@@ -22,7 +21,6 @@ install: ${BIN}
 	@chmod 755 "${DESTDIR}${BINDIR}/${BIN}"
 	@echo installing manual page to ${DESTDIR}${MANDIR}/man1
 	@mkdir -p ${DESTDIR}${MANDIR}/man1
-	@sed "s/VERSION/${VERSION}/g" < clic.1 > ${DESTDIR}${MANDIR}/man1/clic.1
 	@chmod 644 ${DESTDIR}${MANDIR}/man1/clic.1
 
 uninstall:
