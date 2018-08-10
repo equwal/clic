@@ -1,65 +1,87 @@
-.TH CLIC 1 clic\-VERSION
-.SH NAME
-clic \- a terminal gopher client
-.SH SYNOPSIS
-.B clic
-.RB [ \-k ]
-.IR [URL]
-.PP
-.SH DESCRIPTION
-.B clic
+.Dd $Mdocdate: February 2 2018 *
+.Dt CLIC 1
+.Os
+.Sh NAME
+.Nm clic
+.Nd a text based gopher client
+.Sh SYNOPSIS
+.Nm clic
+.Op Fl k
+.Op URL
+.Sh DESCRIPTION
+.Nm
 is a terminal gopher client. Gopher is a simple protocol to retreive
 hierarchical information. The protocol is defined in
-.I RFC 1436
+.Em RFC 1436
 (Gopher).
-.SH OPTIONS
-.TP
-.B \-k
+.Pp
+When downloading a file,
+.Nm
+will save it using its filename under
+.Pa /tmp/
+.Sh OPTIONS
+.Bl -tag -width Ds
+.It Op Fl k
 activate the kiosk mode. (Disable running external applications, temp files,
 downloading etc.)
-.SH COMMANDS
+.It Op URL
+load
+.Op URL
+The syntax can be gopher://domain.tld or only domain.tld, port 70 is used by
+default. For using another port, one should add :40550 like in domain.tld:40550.
+.Pp
+It is possible to load a local file using the syntax file://some_file, this file
+should be a gophermap as defined in the RFC. This allows to have some kind of a
+bookmark locally as an entry point to the gopherspace.
+.Sh COMMANDS
 Clic is using a simple commandline for telling it what to do. Here are the
-commands you can enter.
-.TP
-.B Number
-go to link with the specified number.
-.TP
-.B p or / or cd ..
+commands you can enter. There are multiples keys for each function, this is so
+because clic is usable with a numpad only or with a full keyboard.
+.Bl -tag -width Number
+.It Cm Number
+following the link numbered
+.Cm Number
+.It Cm p | / | cd ..
 Go to previous page.
-.TP
-.B h
+.It Cm h
 Display the history.
-.TP
-.B sNUMBER
-Show the url of link $NUMBER
-.TP
-.B d
-Dump raw item information.
-.TP
-.B r or ls or *
-Reload the page.
-.TP
-.B help
-Show the help page.
-.TP
-.B / text
-Search for the specified text.
-.TP
-.B ^D or x or q or . or exit
+.It Cm sNUMBER
+Show the full url of link numbered
+.Cm NUMBER
+It is useful if you need to share or save a link url.
+.It Cm d
+Dump raw result of a menu. This is useful for debugging.
+.It Cm r | ls | *
+Reload the current menu
+.It Cm help
+Show the help text.
+.It Cm / text
+Search for the specified
+.Cm text.
+This act as a filter which will redisplay the current menu only with
+lines matching
+.Cm text.
+This can be used multiples times, the filter will be used on the last result
+to narrow the results.
+.It Cm ^D | x | q | Cm . | exit
 Exit clic.
-.SH PLUMBER
-When some file is opened
+.Sh PLUMBER
+When some file is opened other than a text file or a menu,
 .I clic
-cannot open natively, it will run
-.I xdg-open.
-.SH AUTHORS
+will run
+.Xr xdg-open 1
+on it.
+.Sh AUTHORS
 See the LICENSE file for the authors.
-.SH LICENSE
+.Sh LICENSE
 See the LICENSE file for the terms of redistribution.
-.SH SEE ALSO
-.BR geomyidae (8),
-.BR sacc (1),
-.BR xdg-open (1)
-.SH BUGS
+.Sh SEE ALSO
+.Xr geomyidae 8
+.Xr sacc 1
+.Xr xdg-open 1
+.Sh BUGS
+.Pp
+Programs like torsocks or torify don't work with
+.Nm
+.Pp
 See the TODO file in the distribution.
-
