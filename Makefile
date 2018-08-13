@@ -19,16 +19,16 @@ install: ${BIN}
 	@mkdir -p "${DESTDIR}${BINDIR}"
 	@cp -f clic "${DESTDIR}${BINDIR}/${BIN}"
 	@chmod 755 "${DESTDIR}${BINDIR}/${BIN}"
-	@echo installing manual page to ${DESTDIR}${MANDIR}/man1
-	@mkdir -p ${DESTDIR}${MANDIR}/man1
+	@echo installing manual page to "${DESTDIR}${MANDIR}/man1"
+	@mkdir -p "${DESTDIR}${MANDIR}/man1"
 	@cp -f clic.1 "${DESTDIR}${MANDIR}/man1/clic.1"
-	@chmod 644 ${DESTDIR}${MANDIR}/man1/clic.1
+	@chmod 644 "${DESTDIR}${MANDIR}/man1/clic.1"
 
 uninstall:
 	@echo removing executable file from "${DESTDIR}${PREFIX}/bin"
 	@rm -f "${DESTDIR}${BINDIR}/${BIN}"
-	@echo removing manual page from ${DESTDIR}${MANDIR}/man1
-	@rm -f ${DESTDIR}${MANDIR}/man1/clic.1
+	@echo removing manual page from "${DESTDIR}${MANDIR}/man1"
+	@rm -f "${DESTDIR}${MANDIR}/man1/clic.1"
 
 clean:
 	rm -f "${BIN}" clic.o clic.eclh clic.cxx
