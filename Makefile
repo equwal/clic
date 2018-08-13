@@ -21,6 +21,7 @@ install: ${BIN}
 	@chmod 755 "${DESTDIR}${BINDIR}/${BIN}"
 	@echo installing manual page to ${DESTDIR}${MANDIR}/man1
 	@mkdir -p ${DESTDIR}${MANDIR}/man1
+	@cp -f clic.1 "${DESTDIR}${MANDIR}/man1/clic.1"
 	@chmod 644 ${DESTDIR}${MANDIR}/man1/clic.1
 
 uninstall:
