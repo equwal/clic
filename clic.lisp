@@ -63,6 +63,10 @@
 ;;; array of lines of last menu
 (defparameter *previous-buffer* nil)
 
+;;; bandwidth usage counter
+(defparameter *total-bandwidth-in* 0)
+(defparameter *last-bandwidth-in* 0)
+
 ;;; a list containing the last viewed pages
 (defparameter *history*   '())
 
@@ -303,6 +307,7 @@
                     :fill-pointer 0
                     :initial-element nil
                     :adjustable t))
+  (setf *last-bandwidth-in* 0)
 
   (let ((real-time (get-internal-real-time)))
     ;; we prepare informations about the connection
@@ -319,10 +324,14 @@
         count line into lines
         while line
         do
+	;; count bandwidth usage
+        (incf *total-bandwidth-in* (length line))
+        (incf *last-bandwidth-in* (length line))
         ;; increase array size if needed
           (when (= lines (- (array-total-size *buffer*) 1))
             (adjust-array *buffer* (+ 200 (array-total-size *buffer*))))
           (vector-push line *buffer*)))
+
 
     ;; we store the duration of the connection
     (setf *duration* (float (/ (- (get-internal-real-time) real-time)
@@ -707,13 +716,14 @@
 
 (defun display-prompt()
   (let ((last-page (car *history*)))
-    (format t "~agopher://~a:~a/~a~a (~as) / (p)rev (r)edisplay (h)istory : "
+    (format t "~agopher://~a:~a/~a~a (~as, ~aKb) / (p)rev (r)edisplay (h)istory : "
             (if *kiosk-mode* "KIOSK " "")
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
             (location-uri last-page)
-            *duration*))
+            *duration*
+	    (floor (/ *last-bandwidth-in* 1024.0))))
   (force-output))
 
 (defun shell()
@@ -769,7 +779,8 @@
                 ;; to look it here
                 (when (not (eq 'end (visit destination)))
                   ;; we continue to the shell if we are in a terminal
-                  (shell))))
+                  (shell)))
+	    (format t "~a kB in.~%" (floor (/ *total-bandwidth-in* 1024.0))))
           (pipe-to-stdout destination)))))
 
 ;; we allow ecl to use a new kind of argument
