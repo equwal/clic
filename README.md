@@ -37,7 +37,7 @@ How to use clic
 ===============
 
 By default *clic* will load the page **gopherproject/1/** with a
-number on the left of each link. Pleas type the number of a link to
+number on the left of each link. Please type the number of a link to
 follow it. If it's a text, the $PAGER program will be called to show
 it, if it's a binary file (types g,I and 9) it will be downloaded into
 `/tmp/` and then `xdg-open` will be called on the filename.
