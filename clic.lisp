@@ -546,6 +546,7 @@
    (format t "~a~%" line)))
 
 (defun display-with-pager()
+  "display the buffer using $PAGER"
   (let* ((uri (location-uri (car *history*)))
          (filename (subseq uri (1+ (position #\/ uri :from-end t))))
          (path (concatenate 'string "/tmp/" (or filename "index"))))
@@ -566,6 +567,7 @@
 ;; display a text file using the pager by piping
 ;; the data to out, no temp file
 (defun display-with-pager-kiosk()
+  "display the buffer to stdout, we don't use system() in kiosk mode"
   (loop for line across *buffer*
 	do
 	(format t "~a~%" line)))
@@ -613,11 +615,13 @@
               (format t "~%")))))))
 
 (defun pipe-text(host port uri)
+  "pipe text to stdout, with stdout not a TTY output"
   (getpage host port uri)
   (foreach-buffer
    (format t "~a~%" line)))
 
 (defun pipe-binary(host port uri)
+  "pipe data to stdout, with stdout not a TTY output"
   (easy-socket
    (format stream "~a~a~a" uri #\Return #\Newline)
    (force-output stream)
@@ -715,6 +719,7 @@
 
 
 (defun display-prompt()
+  "show the prompt and helper"
   (let ((last-page (car *history*)))
     (format t "~agopher://~a:~a/~a~a (~as, ~aKb) / (p)rev (r)edisplay (h)istory : "
             (if *kiosk-mode* "KIOSK " "")
