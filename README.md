@@ -5,6 +5,11 @@ Clic (Common LISP Interactive Client) is a terminal based gopher
 client. The name is a bad pun, **clic** is the sound of a mouse click
 but the software is keyboard driven...
 
+Clic supports TLS connection by first trying to speak TLS to the remote
+server, if it doesn't work it fallback to plaintext. The status prompt
+will show either "**TLS**" or "UNSECURE" depending on how the communication
+has been negociated.
+
 
 Requirements
 ============
