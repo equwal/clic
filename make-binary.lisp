@@ -1,10 +1,10 @@
 ;; ecl produces a linked binary to ecl shared library
+(load "3rdparties/bundle.lisp")
+(require 'usocket)
+(require 'cl+ssl)
 (require 'asdf)
-#+ecl
 (require 'cmp)
-#+ecl
-(require 'sockets)
-#+ecl
+
 (progn
   (compile-file "clic.lisp" :system-p t)
   (c:build-program "clic"
@@ -13,5 +13,5 @@
                                             (condition () (quit))))
                    :lisp-files '("clic.o")))
 
-(format t "INFO => Compilation done (or at least it should be)~%")
+(format t "~%~%Compilation finished~%")
 (quit)

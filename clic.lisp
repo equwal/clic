@@ -4,6 +4,10 @@
   #+ecl
   (require 'sockets))
 
+(load "3rdparties/bundle.lisp")
+(require :cl+ssl)
+(require :usocket)
+
 ;;;; C binding to get terminal informations
 #+ecl
 (progn
@@ -44,7 +48,7 @@
 ;;;; END C binding
 
 ;; structure to store links
-(defstruct location host port type uri
+(defstruct location host port type uri tls
            :predicate)
 
 ;;;; kiosk mode 
@@ -139,18 +143,24 @@
 (defmacro easy-socket(&body code)
   "avoid duplicated code used for sockets"
   `(progn
-     (let* ((address (sb-bsd-sockets:get-host-by-name host))
-            (host (car (sb-bsd-sockets:host-ent-addresses address)))
-            (socket (make-instance 'sb-bsd-sockets:inet-socket :type :stream :protocol :tcp)))
 
-       (sb-bsd-sockets:socket-connect socket host port)
+     ;; try tls connection
+     (usocket:with-client-socket (socket sock host port)
+       (handler-case
+           (let ((stream
+                  (cl+ssl:make-ssl-client-stream
+                   sock
+                   :external-format '(:utf-8 :eol-style :lf)
+                   :unwrap-stream-p t
+                   :hostname host)))
+                 ;; store in metadata that we are using TLS
+             (setf (location-tls (car *history*)) t)
+             ,@code)
 
-       ;; we open a stream for input/output
-       (let ((stream (sb-bsd-sockets:socket-make-stream socket
-                                                        :input t
-                                                        :output t
-                                                        :element-type :default)))
-         ,@code))))
+         ;; fallback to regular plaintext connection if tls fails
+         (t (c)
+           (usocket:with-client-socket (socket stream host port)
+             ,@code))))))
 
 (defmacro check(identifier &body code)
   "Macro to define a new syntax to make 'when' easier for formatted-output function"
@@ -652,6 +662,9 @@
 (defun visit(destination)
   "fetch and display content interactively"
 
+  ;; add it to the history !
+  (push destination *history*)
+
   (let ((type
          (cond
 
@@ -689,15 +702,12 @@
 			      (location-uri destination)))
             'binary))))
 
-
     ;; we reset the links table ONLY if we have a new menu
     ;; we also keep the last menu buffer
     (when (eql type 'menu)
       (setf *previous-buffer* (copy-array *buffer*))
       (setf *links* (make-hash-table)))
 
-    ;; add it to the history !
-    (push destination *history*)
 
     (if (eql type 'menu)
         (display-interactive-menu)
@@ -721,8 +731,9 @@
 (defun display-prompt()
   "show the prompt and helper"
   (let ((last-page (car *history*)))
-    (format t "~agopher://~a:~a/~a~a (~as, ~aKb) / (p)rev (r)edisplay (h)istory : "
+    (format t "~a~agopher://~a:~a/~a~a (~as, ~aKb) / (p)rev (r)edisplay (h)istory : "
             (if *kiosk-mode* "KIOSK " "")
+            (if (location-tls last-page) "**TLS** " " UNSECURE ")
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
