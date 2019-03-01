@@ -11,8 +11,8 @@ MANDIR = ${PREFIX}/share/man
 
 all: ${BIN}
 
-${BIN}:	clic.lisp make-binary.lisp
-	ecl -load make-binary.lisp
+${BIN}:	clic.lisp clic.asd make-binary.lisp
+	ecl -norc -load make-binary.lisp
 
 install: ${BIN}
 	@echo installing executable to "${DESTDIR}${PREFIX}/bin"

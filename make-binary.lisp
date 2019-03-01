@@ -1,17 +1,15 @@
-;; ecl produces a linked binary to ecl shared library
 (load "3rdparties/bundle.lisp")
-(require 'usocket)
-(require 'cl+ssl)
-(require 'asdf)
-(require 'cmp)
+(require :asdf)
 
-(progn
-  (compile-file "clic.lisp" :system-p t)
-  (c:build-program "clic"
-                   :prologue-code '(ext:set-signal-handler ext:+sigint+ nil)
-                   :epilogue-code '(progn (handler-case (main)
-                                            (condition () (quit))))
-                   :lisp-files '("clic.o")))
+;; load clic which is in $PWD
+(push '*default-pathname-defaults* asdf:*central-registry*)
 
-(format t "~%~%Compilation finished~%")
+(in-package :cl-user)
+
+(asdf:make-build "clic" :type :program
+                 :monolithic t
+                 :move-here "."
+                 :prologue-code '(ext:set-signal-handler ext:+sigint+ nil)
+                 :epilogue-code '(progn (handler-case (main)
+                                          (condition () (quit)))))
 (quit)

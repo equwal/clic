@@ -1,12 +1,4 @@
-;;; let's hide the loading
-(let ((*standard-output* (make-broadcast-stream)))
-  (require 'asdf)
-  #+ecl
-  (require 'sockets))
-
-(load "3rdparties/bundle.lisp")
-(require :cl+ssl)
-(require :usocket)
+(in-package :cl-user)
 
 ;;;; C binding to get terminal informations
 #+ecl
@@ -733,7 +725,7 @@
   (let ((last-page (car *history*)))
     (format t "~a~agopher://~a:~a/~a~a (~as, ~aKb) / (p)rev (r)edisplay (h)istory : "
             (if *kiosk-mode* "KIOSK " "")
-            (if (location-tls last-page) "**TLS** " " UNSECURE ")
+            (if (location-tls last-page) "**TLS** " "UNSECURE ")
             (location-host last-page)
             (location-port last-page)
             (location-type last-page)
