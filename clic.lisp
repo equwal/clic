@@ -144,6 +144,7 @@
                    sock
                    :external-format '(:utf-8 :eol-style :lf)
                    :unwrap-stream-p t
+                   ;;:verify nil
                    :hostname host)))
                  ;; store in metadata that we are using TLS
              (setf (location-tls (car *history*)) t)
@@ -184,7 +185,7 @@
           (field      (split (subseq line 1) #\Tab)))
 
       ;; if split worked
-      (when (= (length field) 4)
+      (when (>= (length field) 4)
         (let ((line-number (+ 1 (hash-table-count *links*)))
               (text (car field))
               (uri  (cadr field))
