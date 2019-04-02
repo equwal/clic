@@ -6,7 +6,7 @@
 .Nd a text based gopher client
 .Sh SYNOPSIS
 .Nm clic
-.Op Fl k
+.Op Fl t k
 .Op URL
 .Sh DESCRIPTION
 .Nm
@@ -21,6 +21,10 @@ will save it using its filename under
 .Pa /tmp/
 .Sh OPTIONS
 .Bl -tag -width Ds
+.It Op Fl k
+activate the non split mode.
+This prevent clic to break menu display when the display reach the
+terminal size. This is useful when you want to scroll using your terminal.
 .It Op Fl k
 activate the kiosk mode. (Disable running external applications, temp files,
 downloading etc.)

@@ -46,6 +46,9 @@
 ;;;; kiosk mode 
 (defparameter *kiosk-mode* nil)
 
+;;;; no split mode
+(defparameter *no-split* nil)
+
 (defmacro kiosk-mode(&body code)
   "prevent code if kiosk mode is enabled"
   `(progn
@@ -435,6 +438,9 @@
          (c-kiosk-pledge)
          (setf *kiosk-mode* t))
 
+        ((string= "-t" url)
+         (setf *no-split* t))
+
         ((= 0 (or (search "file://" url) 1))
          (load-file-menu (subseq url 7))
          (make-location :host 'local-file
@@ -581,7 +587,9 @@
   ;; so if the user doesn't want to scroll
   ;; we break the loop and then execute the command
   (let ((input nil))
-    (let ((rows (- (c-termsize) 1))) ; -1 for command bar
+    (let ((rows (if *no-split*
+                    -1
+                    (* (- (c-termsize) 1))))) ; -1 for command bar
 
       (loop for line across *buffer*
          counting line into row

@@ -72,7 +72,11 @@ permitting to use clic with the numpad with only one hand :
 Command line usage
 ==================
 
-clic [-k] [url|file]
+clic [-t] [-k] [url|file]
+
+If you start clic with -t parameter, then menus will be displayed in
+one operation, instead of asking to display next page once it reach
+your terminal size.
 
 If you start clic with -k parameter, then kiosk mode is enabled, which
 mean it won't call any external program or save any data on the
