@@ -1,4 +1,4 @@
-.Dd $Mdocdate: February 2 2018 *
+.Dd $Mdocdate: February 02 2018 $
 .Dt CLIC 1
 .Os
 .Sh NAME
@@ -10,8 +10,9 @@
 .Op URL
 .Sh DESCRIPTION
 .Nm
-is a terminal gopher client. Gopher is a simple protocol to retreive
-hierarchical information. The protocol is defined in
+is a terminal gopher client.
+Gopher is a simple protocol to retreive hierarchical information.
+The protocol is defined in
 .Em RFC 1436
 (Gopher).
 .Pp
@@ -24,70 +25,74 @@ will save it using its filename under
 .It Op Fl t
 Activate the non split mode.
 This prevents clic from breaking the menu display into parts when the display
-reaches the terminal size. This is useful when you want to scroll using your
-terminal.
+reaches the terminal size.
+This is useful when you want to scroll using your terminal.
 .It Op Fl k
 Activate the kiosk mode. (Disable running external applications, temp files,
 downloading etc.)
 .It Op URL
 Load
 .Op URL .
-The syntax can be gopher://domain.tld or only domain.tld. Port 70 is used by
-default. For using another port, one should add :40550 like in domain.tld:40550.
+The syntax can be gopher://domain.tld or only domain.tld.
+Port 70 is used by default.
+For using another port, one should add :40550 like in domain.tld:40550.
 .Pp
-It is possible to load a local file using the syntax file://some_file. This file
-should be a gophermap as defined in the RFC. This allows for custom bookmarks to
-be created locally as an entry point to the gopherspace.
+It is possible to load a local file using the syntax file://some_file.
+This file should be a gophermap as defined in the RFC.
+This allows for custom bookmarks to be created locally as an entry point to the
+gopherspace.
+.El
 .Sh COMMANDS
-Clic uses a simple command line for its interface. There are multiple command
-options for some functions. This allows clic to be used with a full keyboard or a
-numpad.
+Clic uses a simple command line for its interface.
+There are multiple command options for some functions.
+This allows clic to be used with a full keyboard or a numpad.
 .Bl -tag -width Number
 .It Cm Number
 Follows the link numbered
-.Cm Number.
+.Cm Number .
 .It Cm p | / | cd ..
 Go to previous page.
 .It Cm h
 Display the history.
 .It Cm sNUMBER
 Show the full URL of link numbered
-.Cm NUMBER.
+.Cm NUMBER .
 Useful for sharing or saving a link URL.
 .It Cm d
-Dump raw result of a menu. This is useful for debugging.
+Dump raw result of a menu.
+This is useful for debugging.
 .It Cm r | ls | *
 Reload the current menu.
 .It Cm help
 Show the help text.
 .It Cm / text
 Search for the specified
-.Cm text.
-This acts as a filter which will redisplay the current menu only with
-lines matching
-.Cm text.
-This can be used multiples times. The filter will be used on the last result
+.Cm text .
+This acts as a filter which will redisplay the current menu only with lines
+matching
+.Cm text .
+This can be used multiples times.
+The filter will be used on the last result
 to narrow the results.
 .It Cm ^D | x | q | Cm . | exit
 Exit clic.
+.El
 .Sh PLUMBER
 When some file is opened other than a text file or a menu,
 .Nm
 will run
 .Xr xdg-open 1
 on it.
+.Sh SEE ALSO
+.Xr sacc 1 ,
+.Xr xdg-open 1 ,
+.Xr geomyidae 8
 .Sh AUTHORS
-See the LICENSE file for the authors.
+.An See the LICENSE file for the authors .
 .Sh LICENSE
 See the LICENSE file for the terms of redistribution.
-.Sh SEE ALSO
-.Xr geomyidae 8
-.Xr sacc 1
-.Xr xdg-open 1
 .Sh BUGS
-.Pp
 Programs like torsocks or torify don't work with
 .Nm .
-
 .Pp
 See the TODO file in the distribution.
