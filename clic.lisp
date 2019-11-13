@@ -40,7 +40,7 @@
 ;;;; END C binding
 
 ;; structure to store links
-(defstruct location host port type uri tls
+(defstruct location host port type uri tls text
            :predicate)
 
 ;;;; kiosk mode 
@@ -207,13 +207,13 @@
                 ;; 0 text file
                 (check "0"
                        (setf (gethash line-number *links*)
-                             (make-location :host host :port port :uri uri :type line-type ))
+                             (make-location :host host :port port :uri uri :type line-type :text text))
                        (print-with-color text 'file line-number))
 
                 ;; 1 directory
                 (check "1"
                        (setf (gethash line-number *links*)
-                             (make-location :host host :port port :uri uri :type line-type ))
+                             (make-location :host host :port port :uri uri :type line-type :text text))
                        (print-with-color text 'folder line-number))
 
                 ;; 2 CSO phone-book
@@ -239,7 +239,7 @@
                 ;; 7 Index search server
                 (check "7"
                        (setf (gethash line-number *links*)
-                             (make-location :host host :port port :uri uri :type line-type ))
+                             (make-location :host host :port port :uri uri :type line-type :text text))
                        (print-with-color text 'red line-number))
 
                 ;; 8 Telnet session
@@ -249,7 +249,7 @@
                 ;; 9 Binary
                 (check "9"
                        (setf (gethash line-number *links*)
-                             (make-location :host host :port port :uri uri :type line-type ))
+                             (make-location :host host :port port :uri uri :type line-type :text text))
                        (print-with-color text 'red line-number))
 
                 ;; + redundant server
@@ -263,13 +263,13 @@
                 ;; g GIF file
                 (check "g"
                        (setf (gethash line-number *links*)
-                             (make-location :host host :port port :uri uri :type line-type))
+                             (make-location :host host :port port :uri uri :type line-type :text text))
                        (print-with-color text 'red line-number))
 
                 ;; I image
                 (check "I"
                        (setf (gethash line-number *links*)
-                             (make-location :host host :port port :uri uri :type line-type ))
+                             (make-location :host host :port port :uri uri :type line-type :text text))
                        (print-with-color text 'red line-number))
 
                 ;; h http link
@@ -444,6 +444,7 @@
         ((= 0 (or (search "file://" url) 1))
          (load-file-menu (subseq url 7))
          (make-location :host 'local-file
+                        :text url
                         :port nil
                         :type "1"
                         :uri url))
@@ -464,6 +465,8 @@
                              :port (if host-port ;; <- empty if no port given
                                        (parse-integer (car host-port))
                                        70)
+
+                             :text url
 
                              ;; if type is empty we default to "1"
                              :type (let ((type (pop infos)))
@@ -528,7 +531,17 @@
 
     ;; show history
     ((string= "h" input)
-     (format t "~{~a~%~}" *history*))
+      (setf *links* (make-hash-table))
+        (loop for element in *history*
+          do
+            (formatted-output
+              (format nil "~a~a	~a	~a	~a~%"
+                    (location-type element)
+                    (location-text element)
+                    (location-uri element)
+                    (location-host element)
+                    (location-port element)))))
+
 
     ;; follow a link
     (t
@@ -782,7 +795,7 @@
 
       ;; if we didn't passed a url as parameter, use a default
       (if (not (location-p destination))
-          (setf destination (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1")))
+          (setf destination (make-location :host "gopherproject.org" :port 70 :uri "/" :type "1" :text "gopherproject")))
 
       ;; is there an output redirection ?
       (if (ttyp)
