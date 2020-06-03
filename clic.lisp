@@ -788,7 +788,7 @@
   ;; re-enable SIGINT (Ctrl+C) disabled for loading clic
   (ext:set-signal-handler ext:+sigint+ 'quit)
 
-  (ignore-errors ;; lisp is magic
+  (handler-case
     (let ((destination (car (last
                              (loop for element in (get-argv)
                                 collect (parse-url element))))))
@@ -811,7 +811,11 @@
                   ;; we continue to the shell if we are in a terminal
                   (shell)))
 	    (format t "~a kB in.~%" (floor (/ *total-bandwidth-in* 1024.0))))
-          (pipe-to-stdout destination)))))
+          (pipe-to-stdout destination)))
+    (t (error)
+	(progn
+	  (format t "Something went wrong~%")
+          (print error)))))
 
 ;; we allow ecl to use a new kind of argument
 ;; not sure how it works but that works
