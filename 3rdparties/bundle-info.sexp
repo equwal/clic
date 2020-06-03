@@ -1,10 +1,10 @@
-(:CREATION-TIME "2019-03-01T11:39:38Z" :REQUESTED-SYSTEMS
+(:CREATION-TIME "2020-06-03T07:34:37Z" :REQUESTED-SYSTEMS
  ("usocket" "cl+ssl" "asdf") :LISP-INFO
- (:MACHINE-INSTANCE "solene.perso.local" :MACHINE-TYPE "amd64" :MACHINE-VERSION
-  NIL :LISP-IMPLEMENTATION-TYPE "ECL" :LISP-IMPLEMENTATION-VERSION "16.1.3")
+ (:MACHINE-INSTANCE "t400.lan" :MACHINE-TYPE "amd64" :MACHINE-VERSION NIL
+  :LISP-IMPLEMENTATION-TYPE "ECL" :LISP-IMPLEMENTATION-VERSION "20.4.24")
  :QUICKLISP-INFO
- (:HOME "/home/solene/.eclquicklisp/" :LOCAL-PROJECT-DIRECTORIES
-  ("/home/solene/.eclquicklisp/local-projects/") :DISTS
+ (:HOME "/home/solene/quicklisp/" :LOCAL-PROJECT-DIRECTORIES
+  ("/home/solene/quicklisp/local-projects/") :DISTS
   ((:NAME "quicklisp" :DIST-URL
-    "http://beta.quicklisp.org/dist/quicklisp/2019-02-02/distinfo.txt" :VERSION
-    "2019-02-02"))))
+    "http://beta.quicklisp.org/dist/quicklisp/2020-04-27/distinfo.txt" :VERSION
+    "2020-04-27"))))
